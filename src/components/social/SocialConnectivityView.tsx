@@ -41,10 +41,10 @@ export const SocialConnectivityView: React.FC = () => {
   };
 
   const badgeOptions: { type: PeerBadge['badgeType']; label: string; icon: string; desc: string }[] = [
-    { type: 'lifesaver', label: 'Lifesaver', icon: '🛟', desc: 'Stepped in when work got heavy' },
+    { type: 'lifesaver', label: 'Lifesaver', icon: '🆘', desc: 'Stepped in when work got heavy' },
     { type: 'focus_champion', label: 'Focus Champion', icon: '🎯', desc: 'Respected deep focus hours' },
     { type: 'team_anchor', label: 'Team Anchor', icon: '⚓', desc: 'Kept everyone grounded & supported' },
-    { type: 'positive_energy', label: 'Positive Energy', icon: '☀️', desc: 'Brought optimism & kindness' }
+    { type: 'positive_energy', label: 'Positive Energy', icon: '🌟', desc: 'Brought optimism & kindness' }
   ];
 
   return (
@@ -207,50 +207,50 @@ export const SocialConnectivityView: React.FC = () => {
         </div>
 
         {/* Appreciation Wall Feed */}
-        <div className="enterprise-card p-6 border border-slate-200 lg:col-span-2 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                Company Gratitude & Recognition Feed
-              </h3>
-              <span className="text-xs text-slate-500">Live Team Feed</span>
-            </div>
+        <div className="enterprise-card p-6 border border-slate-200 lg:col-span-2 flex flex-col h-[560px]">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 shrink-0">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              Company Gratitude & Recognition Feed
+            </h3>
+            <span className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+              Live Team Feed ({badges.length})
+            </span>
+          </div>
 
-            <div className="space-y-4">
-              {badges.map(badge => (
-                <div key={badge.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={badge.senderAvatar} alt={badge.senderName} className="w-8 h-8 rounded-full border border-blue-400" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">
-                          {badge.senderName} <span className="text-slate-500 font-normal">recognized</span> {badge.recipientName}
-                        </p>
-                        <span className="text-[10px] text-slate-400 font-medium">{badge.timestamp}</span>
-                      </div>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1.5">
+            {badges.map(badge => (
+              <div key={badge.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={badge.senderAvatar} alt={badge.senderName} className="w-8 h-8 rounded-full border border-blue-400" />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">
+                        {badge.senderName} <span className="text-slate-500 font-normal">recognized</span> {badge.recipientName}
+                      </p>
+                      <span className="text-[10px] text-slate-400 font-medium">{badge.timestamp}</span>
                     </div>
-
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5">
-                      {badge.badgeType === 'lifesaver' ? '🛟 Lifesaver' :
-                       badge.badgeType === 'focus_champion' ? '🎯 Focus Champion' :
-                       badge.badgeType === 'team_anchor' ? '⚓ Team Anchor' : '☀️ Positive Energy'}
-                    </span>
                   </div>
 
-                  <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
-                    "{badge.message}"
-                  </p>
-
-                  {badge.virtualCoffeeSent && (
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-amber-800">
-                      <Coffee className="w-4 h-4 text-amber-600" />
-                      <span>Virtual Coffee Voucher Included ☕</span>
-                    </div>
-                  )}
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5">
+                    {badge.badgeType === 'lifesaver' ? '🆘 Lifesaver' :
+                     badge.badgeType === 'focus_champion' ? '🎯 Focus Champion' :
+                     badge.badgeType === 'team_anchor' ? '⚓ Team Anchor' : '🌟 Positive Energy'}
+                  </span>
                 </div>
-              ))}
-            </div>
+
+                <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-200">
+                  "{badge.message}"
+                </p>
+
+                {badge.virtualCoffeeSent && (
+                  <div className="flex items-center gap-2 text-[11px] font-bold text-amber-800">
+                    <Coffee className="w-4 h-4 text-amber-600" />
+                    <span>Virtual Coffee Voucher Included ☕</span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

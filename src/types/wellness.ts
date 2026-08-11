@@ -1,6 +1,58 @@
 export type UserRole = 'employee' | 'hr_manager';
 
-export type BurnoutRiskLevel = 'low' | 'moderate' | 'high';
+export type BurnoutRiskLevel = 'low' | 'normal' | 'moderate' | 'high';
+
+export const getBurnoutRiskLevel = (score: number): BurnoutRiskLevel => {
+  if (score <= 25) return 'low';
+  if (score <= 50) return 'normal';
+  if (score <= 75) return 'moderate';
+  return 'high';
+};
+
+export const getBurnoutRiskConfig = (level: BurnoutRiskLevel) => {
+  switch (level) {
+    case 'low':
+      return {
+        level: 'low' as const,
+        label: 'Low Risk',
+        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        strokeColor: 'text-emerald-500',
+        textColor: 'text-emerald-600',
+        hexColor: '#10b981',
+        recommendation: 'Optimal work balance. Excellent energy & focus!'
+      };
+    case 'normal':
+      return {
+        level: 'normal' as const,
+        label: 'Normal',
+        badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+        strokeColor: 'text-blue-500',
+        textColor: 'text-blue-600',
+        hexColor: '#3b82f6',
+        recommendation: 'Workload is within healthy parameters.'
+      };
+    case 'moderate':
+      return {
+        level: 'moderate' as const,
+        label: 'Moderate Risk',
+        badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+        strokeColor: 'text-amber-500',
+        textColor: 'text-amber-700',
+        hexColor: '#f59e0b',
+        recommendation: 'Elevated workload. Reduce meeting density & take focus breaks.'
+      };
+    case 'high':
+      return {
+        level: 'high' as const,
+        label: 'High Risk',
+        badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+        strokeColor: 'text-rose-500',
+        textColor: 'text-rose-600',
+        hexColor: '#f43f5e',
+        recommendation: 'Critical burnout warning! Immediate disconnect & quiet hours recommended.'
+      };
+  }
+};
 
 export interface BurnoutMetrics {
   overallScore: number; // 0-100

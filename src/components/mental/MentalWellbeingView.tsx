@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
+import { MoodHistoryScrollWheel } from './MoodHistoryScrollWheel';
 import { 
   BrainCircuit, 
   Sparkles, 
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const MentalWellbeingView: React.FC = () => {
-  const { moodLogs, chatMessages, sendCoachMessage } = useWellness();
+  const { chatMessages, sendCoachMessage } = useWellness();
   const [inputText, setInputText] = useState('');
 
   const handleSend = (e: React.FormEvent) => {
@@ -46,52 +47,9 @@ export const MentalWellbeingView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Mood Log History */}
-        <div className="enterprise-card p-6 border border-slate-200 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Smile className="w-5 h-5 text-blue-600" />
-                Mood History
-              </h3>
-              <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 font-semibold flex items-center gap-1">
-                <Lock className="w-3 h-3" /> Anonymous
-              </span>
-            </div>
+        {/* Left Column: Interactive 3D Mood History Scroll Wheel */}
+        <MoodHistoryScrollWheel />
 
-            <div className="space-y-3">
-              {moodLogs.map(log => (
-                <div key={log.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-                  <span className="text-2xl">
-                    {log.mood === 'thriving' ? '🤩' : log.mood === 'good' ? '😊' : log.mood === 'okay' ? '😐' : log.mood === 'stressed' ? '😰' : '😫'}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-900 capitalize">{log.mood}</h4>
-                      <span className="text-[10px] text-slate-400 font-medium">{log.timestamp}</span>
-                    </div>
-                    {log.note && <p className="text-xs text-slate-600 mt-0.5">"{log.note}"</p>}
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[10px] text-slate-400">Energy Level:</span>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`w-2 h-2 rounded-full ${i < log.energyLevel ? 'bg-blue-600' : 'bg-slate-200'}`} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <p className="text-[11px] text-slate-400 mt-4 text-center">
-            Daily logs build aggregate baseline trends for HR without exposing individual identities.
-          </p>
-        </div>
 
         {/* Right Column: AI Wellness Coach Chat Interface */}
         <div className="enterprise-card p-6 border border-slate-200 lg:col-span-2 flex flex-col h-[560px]">

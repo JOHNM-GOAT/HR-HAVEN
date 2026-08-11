@@ -122,7 +122,7 @@ export const PhysicalHealthView: React.FC = () => {
                 className="w-full flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🧘</span>
+                  <span className="text-2xl">🧘‍♂️</span>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-700">Posture & Neck Stretch</h4>
                     <p className="text-[11px] text-slate-500">Relieves upper back and neck tension</p>
@@ -154,7 +154,7 @@ export const PhysicalHealthView: React.FC = () => {
                 className="w-full flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🌬️</span>
+                  <span className="text-2xl">🫁</span>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-700">Diaphragmatic Breathwork</h4>
                     <p className="text-[11px] text-slate-500">Reduces heart rate & anxiety</p>

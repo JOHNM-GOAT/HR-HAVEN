@@ -58,13 +58,15 @@ export default function Home() {
 
   return (
     <div
-      className={`min-h-screen bg-slate-100 flex flex-col transition-all ${accessibility.dyslexiaFont ? 'dyslexia-font' : ''
-        } ${accessibility.highContrast ? 'high-contrast' : ''
-        }`}
+      className={`h-screen overflow-hidden bg-slate-100 flex flex-col transition-all ${
+        accessibility.dyslexiaFont ? 'dyslexia-font' : ''
+      } ${
+        accessibility.highContrast ? 'high-contrast' : ''
+      }`}
     >
       <Navbar />
 
-      <div className="flex-1 flex w-full">
+      <div className="flex-1 flex w-full overflow-hidden">
         <Sidebar />
 
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto max-w-full bg-slate-100/80">

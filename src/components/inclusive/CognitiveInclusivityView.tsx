@@ -3,23 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { AccessibilitySettings } from '../../types/wellness';
-import { 
-  Zap, 
-  Sliders, 
-  Volume2, 
-  Play, 
-  Pause, 
+import {
+  Zap,
+  Sliders,
+  Volume2,
+  Play,
+  Pause,
   RotateCcw
 } from 'lucide-react';
 
 export const CognitiveInclusivityView: React.FC = () => {
-  const { 
-    accessibility, 
-    toggleFocusMode, 
-    toggleDyslexiaFont, 
-    toggleHighContrast, 
+  const {
+    accessibility,
+    toggleFocusMode,
+    toggleDyslexiaFont,
+    toggleHighContrast,
+    toggleBatchNotifications,
+    toggleClutterReduction,
     setAmbientSound,
-    setToastNotification 
+    setToastNotification
   } = useWellness();
 
   // Pomodoro timer state
@@ -75,11 +77,10 @@ export const CognitiveInclusivityView: React.FC = () => {
             </h3>
             <button
               onClick={toggleFocusMode}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                accessibility.focusModeActive
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${accessibility.focusModeActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                   : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-              }`}
+                }`}
             >
               Adaptive Focus Shield: {accessibility.focusModeActive ? 'ACTIVE' : 'OFF'}
             </button>
@@ -87,13 +88,12 @@ export const CognitiveInclusivityView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Dyslexia Friendly Font Toggle */}
-            <div 
+            <div
               onClick={toggleDyslexiaFont}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                accessibility.dyslexiaFont
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.dyslexiaFont
                   ? 'bg-blue-50 border-blue-400 text-blue-900'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-slate-900">Dyslexia-Friendly Font</span>
@@ -105,13 +105,12 @@ export const CognitiveInclusivityView: React.FC = () => {
             </div>
 
             {/* High Contrast Mode Toggle */}
-            <div 
+            <div
               onClick={toggleHighContrast}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                accessibility.highContrast
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.highContrast
                   ? 'bg-blue-50 border-blue-400 text-blue-900'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-slate-900">High Contrast UI</span>
@@ -122,20 +121,36 @@ export const CognitiveInclusivityView: React.FC = () => {
               <p className="text-xs text-slate-500">Enhances visual borders and background contrast for readability.</p>
             </div>
 
-            {/* Notification Batching */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            {/* Notification Batching Toggle */}
+            <div
+              onClick={toggleBatchNotifications}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.batchNotifications
+                  ? 'bg-blue-50 border-blue-400 text-blue-900'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-slate-900">Notification Batching</span>
-                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">Active</span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.batchNotifications ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                  {accessibility.batchNotifications && <span className="text-[10px] text-white font-bold">✓</span>}
+                </div>
               </div>
               <p className="text-xs text-slate-500">Batches non-urgent emails & Slack alerts into hourly focus digests.</p>
             </div>
 
-            {/* Minimal Distraction View */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            {/* Clutter Reduction Toggle */}
+            <div
+              onClick={toggleClutterReduction}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.reducedMotion
+                  ? 'bg-blue-50 border-blue-400 text-blue-900'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-slate-900">Clutter Reduction</span>
-                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">Enabled</span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.reducedMotion ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                  {accessibility.reducedMotion && <span className="text-[10px] text-white font-bold">✓</span>}
+                </div>
               </div>
               <p className="text-xs text-slate-500">Removes non-essential decorative animations during focus sessions.</p>
             </div>
@@ -153,11 +168,10 @@ export const CognitiveInclusivityView: React.FC = () => {
                 <button
                   key={sound.id}
                   onClick={() => setAmbientSound(sound.id)}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
-                    accessibility.ambientSound === sound.id
+                  className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${accessibility.ambientSound === sound.id
                       ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
                       : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   <span className="text-2xl">{sound.icon}</span>
                   <span className="text-xs">{sound.label}</span>

@@ -24,9 +24,12 @@
 
 /* Micro Animations */
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 12px rgba(37, 99, 235, 0.2);
   }
+
   50% {
     box-shadow: 0 0 24px rgba(37, 99, 235, 0.4);
   }
@@ -37,10 +40,13 @@
 }
 
 @keyframes breathe {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.85;
   }
+
   50% {
     transform: scale(1.12);
     opacity: 1;
@@ -86,4 +92,23 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #2563eb;
+}
+
+/* 3D Scroll Wheel perspective styles */
+.perspective-container {
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

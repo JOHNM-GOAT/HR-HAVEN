@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
+import { getBurnoutRiskConfig } from '../../types/wellness';
 import { 
   Activity, 
   Clock, 
@@ -27,6 +28,7 @@ const weeklyTelemetryData = [
 
 export const PredictiveAnalyticsView: React.FC = () => {
   const { burnoutMetrics } = useWellness();
+  const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
 
   return (
     <div className="space-y-6">
@@ -44,11 +46,13 @@ export const PredictiveAnalyticsView: React.FC = () => {
           </p>
         </div>
         
-        <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3">
-          <ShieldAlert className="w-6 h-6 text-amber-600" />
+        <div className={`px-4 py-2.5 rounded-xl border flex items-center gap-3 ${riskConfig.badgeBg}`}>
+          <ShieldAlert className="w-6 h-6 shrink-0" />
           <div>
-            <p className="text-xs font-bold text-slate-900">Current Risk Score: {burnoutMetrics.overallScore}/100</p>
-            <p className="text-[10px] text-amber-800 font-medium">Recommendation: Reduce meeting density</p>
+            <p className="text-xs font-bold text-slate-900">
+              Current Risk Score: {burnoutMetrics.overallScore}/100 ({riskConfig.label})
+            </p>
+            <p className="text-[11px] font-semibold opacity-90">{riskConfig.recommendation}</p>
           </div>
         </div>
       </div>

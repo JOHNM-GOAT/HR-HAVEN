@@ -10,7 +10,8 @@ import {
   PeerBadge, 
   ChatMessage, 
   BoundaryGuardConfig, 
-  AccessibilitySettings 
+  AccessibilitySettings,
+  getBurnoutRiskLevel
 } from '../types/wellness';
 import { 
   initialBurnoutMetrics, 
@@ -58,7 +59,12 @@ interface WellnessContextType {
   toggleFocusMode: () => void;
   toggleDyslexiaFont: () => void;
   toggleHighContrast: () => void;
+  toggleBatchNotifications: () => void;
+  toggleClutterReduction: () => void;
   setAmbientSound: (sound: AccessibilitySettings['ambientSound']) => void;
+  
+  isSidebarOpen: boolean;
+  toggleSidebar: (open?: boolean) => void;
   
   toastNotification: string | null;
   setToastNotification: (msg: string | null) => void;
@@ -117,19 +123,24 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMoodLogs([newLog, ...moodLogs]);
     setToastNotification('Mood check-in logged anonymously! Thank you for sharing.');
 
-    if (mood === 'thriving' || mood === 'good') {
-      setBurnoutMetrics(prev => ({
+    let scoreChange = 0;
+    if (energyLevel === 5 || mood === 'thriving') scoreChange = -8;
+    else if (energyLevel === 4 || mood === 'good') scoreChange = -4;
+    else if (energyLevel === 3 || mood === 'okay') scoreChange = -1;
+    else if (energyLevel === 2 || mood === 'stressed') scoreChange = 6;
+    else if (energyLevel === 1 || mood === 'exhausted') scoreChange = 12;
+
+    setBurnoutMetrics(prev => {
+      const newScore = Math.min(100, Math.max(0, prev.overallScore + scoreChange));
+      const newLevel = getBurnoutRiskLevel(newScore);
+      const newTrend = scoreChange < 0 ? 'improving' : scoreChange > 0 ? 'worsening' : 'stable';
+      return {
         ...prev,
-        overallScore: Math.max(20, prev.overallScore - 4),
-        trend: 'improving'
-      }));
-    } else if (mood === 'stressed' || mood === 'exhausted') {
-      setBurnoutMetrics(prev => ({
-        ...prev,
-        overallScore: Math.min(95, prev.overallScore + 3),
-        trend: 'worsening'
-      }));
-    }
+        overallScore: newScore,
+        riskLevel: newLevel,
+        trend: newTrend
+      };
+    });
   };
 
   const toggleReminder = (id: string) => {
@@ -206,8 +217,17 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleFocusMode = () => {
     setAccessibility(prev => {
       const nextState = !prev.focusModeActive;
-      setToastNotification(nextState ? 'Adaptive Focus Mode ENABLED. Distractions minimized.' : 'Standard mode restored.');
-      return { ...prev, focusModeActive: nextState };
+      setToastNotification(
+        nextState 
+          ? 'Adaptive Focus Mode ENABLED. Notification batching & clutter reduction auto-activated.' 
+          : 'Standard mode restored.'
+      );
+      return { 
+        ...prev, 
+        focusModeActive: nextState,
+        batchNotifications: nextState ? true : prev.batchNotifications,
+        reducedMotion: nextState ? true : prev.reducedMotion
+      };
     });
   };
 
@@ -219,11 +239,33 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAccessibility(prev => ({ ...prev, highContrast: !prev.highContrast }));
   };
 
+  const toggleBatchNotifications = () => {
+    setAccessibility(prev => {
+      const nextState = !prev.batchNotifications;
+      setToastNotification(nextState ? 'Notification Batching ENABLED.' : 'Notification Batching DISABLED.');
+      return { ...prev, batchNotifications: nextState };
+    });
+  };
+
+  const toggleClutterReduction = () => {
+    setAccessibility(prev => {
+      const nextState = !prev.reducedMotion;
+      setToastNotification(nextState ? 'Clutter Reduction ENABLED.' : 'Clutter Reduction DISABLED.');
+      return { ...prev, reducedMotion: nextState };
+    });
+  };
+
   const setAmbientSound = (sound: AccessibilitySettings['ambientSound']) => {
     setAccessibility(prev => ({ ...prev, ambientSound: sound }));
     if (sound !== 'none') {
       setToastNotification(`Playing ambient soundscape: ${sound.toUpperCase()}`);
     }
+  };
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+
+  const toggleSidebar = (open?: boolean) => {
+    setIsSidebarOpen(prev => (open !== undefined ? open : !prev));
   };
 
   return (
@@ -233,7 +275,10 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         login,
         logout,
         activeTab,
-        setActiveTab,
+        setActiveTab: (tab: NavTab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false); // Auto-close drawer on navigation select
+        },
         userRole,
         setUserRole,
         burnoutMetrics,
@@ -255,7 +300,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toggleFocusMode,
         toggleDyslexiaFont,
         toggleHighContrast,
+        toggleBatchNotifications,
+        toggleClutterReduction,
         setAmbientSound,
+        isSidebarOpen,
+        toggleSidebar,
         toastNotification,
         setToastNotification
       }}

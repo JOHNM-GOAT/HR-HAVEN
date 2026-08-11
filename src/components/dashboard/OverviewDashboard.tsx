@@ -2,17 +2,18 @@
 
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { MoodType } from '../../types/wellness';
-import { 
-  ShieldAlert, 
-  Smile, 
-  Sparkles, 
-  Heart, 
-  Clock, 
-  Calendar, 
-  Activity, 
-  Award, 
-  Zap, 
+import { MoodType, getBurnoutRiskConfig } from '../../types/wellness';
+import { PolarBearEmoji } from '../common/PolarBearEmoji';
+import {
+  ShieldAlert,
+  Smile,
+  Sparkles,
+  Heart,
+  Clock,
+  Calendar,
+  Activity,
+  Award,
+  Zap,
   ArrowRight,
   Moon,
   CheckCircle2,
@@ -21,23 +22,23 @@ import {
 } from 'lucide-react';
 
 export const OverviewDashboard: React.FC = () => {
-  const { 
-    burnoutMetrics, 
-    addMoodLog, 
-    setActiveExercise, 
-    setActiveTab, 
-    boundaryConfig, 
+  const {
+    burnoutMetrics,
+    addMoodLog,
+    setActiveExercise,
+    setActiveTab,
+    boundaryConfig,
     toggleFocusMode,
     accessibility,
     badges
   } = useWellness();
 
   const moodOptions: { type: MoodType; emoji: string; label: string; color: string }[] = [
-    { type: 'thriving', emoji: '🤩', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
-    { type: 'good', emoji: '😊', label: 'Good', color: 'hover:border-blue-500 hover:bg-blue-50 text-slate-800' },
-    { type: 'okay', emoji: '😐', label: 'Okay', color: 'hover:border-amber-500 hover:bg-amber-50 text-slate-800' },
-    { type: 'stressed', emoji: '😰', label: 'Stressed', color: 'hover:border-orange-500 hover:bg-orange-50 text-slate-800' },
-    { type: 'exhausted', emoji: '😫', label: 'Exhausted', color: 'hover:border-rose-500 hover:bg-rose-50 text-slate-800' },
+    { type: 'thriving', emoji: '🐻‍❄️', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
+    { type: 'good', emoji: '🐻‍❄️', label: 'Good', color: 'hover:border-blue-500 hover:bg-blue-50 text-slate-800' },
+    { type: 'okay', emoji: '🐻‍❄️', label: 'Okay', color: 'hover:border-amber-500 hover:bg-amber-50 text-slate-800' },
+    { type: 'stressed', emoji: '🐻‍❄️', label: 'Stressed', color: 'hover:border-orange-500 hover:bg-orange-50 text-slate-800' },
+    { type: 'exhausted', emoji: '🐻‍❄️', label: 'Exhausted', color: 'hover:border-rose-500 hover:bg-rose-50 text-slate-800' },
   ];
 
   return (
@@ -52,7 +53,7 @@ export const OverviewDashboard: React.FC = () => {
             <span className="text-xs text-slate-500">Continuous Privacy-First Telemetry</span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Welcome back, <span className="text-blue-600">Alex Mercer</span>
+            Hi, <span className="text-blue-600">Alex Mercer</span>
           </h2>
           <p className="text-xs text-slate-600 mt-1 max-w-xl">
             Here is your workplace well-being & burnout protection overview for today. All personal telemetry remains 100% anonymous.
@@ -70,11 +71,10 @@ export const OverviewDashboard: React.FC = () => {
           </button>
           <button
             onClick={toggleFocusMode}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
-              accessibility.focusModeActive
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${accessibility.focusModeActive
                 ? 'bg-emerald-600 text-white border-emerald-600'
                 : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-            }`}
+              }`}
           >
             <Zap className="w-4 h-4" />
             <span>{accessibility.focusModeActive ? 'Focus Active' : 'Start Focus Session'}</span>
@@ -98,7 +98,7 @@ export const OverviewDashboard: React.FC = () => {
             </div>
 
             {/* Circular Gauge Visual */}
-            <div className="flex flex-col items-center my-4">
+            <div className="flex flex-col items-center my-3">
               <div className="relative w-40 h-40 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <path
@@ -109,13 +109,7 @@ export const OverviewDashboard: React.FC = () => {
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                   <path
-                    className={
-                      burnoutMetrics.riskLevel === 'high'
-                        ? 'text-rose-500'
-                        : burnoutMetrics.riskLevel === 'moderate'
-                        ? 'text-amber-500'
-                        : 'text-emerald-500'
-                    }
+                    className={getBurnoutRiskConfig(burnoutMetrics.riskLevel).strokeColor}
                     strokeDasharray={`${burnoutMetrics.overallScore}, 100`}
                     strokeWidth="3.8"
                     strokeLinecap="round"
@@ -128,9 +122,25 @@ export const OverviewDashboard: React.FC = () => {
                   <span className="text-3xl font-black text-slate-900 tracking-tight">
                     {burnoutMetrics.overallScore}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mt-0.5">
-                    {burnoutMetrics.riskLevel} Risk
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${getBurnoutRiskConfig(burnoutMetrics.riskLevel).textColor} mt-0.5`}>
+                    {getBurnoutRiskConfig(burnoutMetrics.riskLevel).label}
                   </span>
+                </div>
+              </div>
+
+              {/* 4-Tier Risk Scale Indicator */}
+              <div className="grid grid-cols-4 gap-1 text-[9px] font-bold text-center mt-3 w-full">
+                <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'low' ? 'bg-emerald-600 text-white font-extrabold shadow-xs' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/60'}`}>
+                  Low<br/>0-25
+                </div>
+                <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'normal' ? 'bg-blue-600 text-white font-extrabold shadow-xs' : 'bg-blue-50 text-blue-800 border border-blue-200/60'}`}>
+                  Normal<br/>26-50
+                </div>
+                <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'moderate' ? 'bg-amber-500 text-white font-extrabold shadow-xs' : 'bg-amber-50 text-amber-900 border border-amber-200/60'}`}>
+                  Moderate<br/>51-75
+                </div>
+                <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'high' ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'bg-rose-50 text-rose-800 border border-rose-200/60'}`}>
+                  High<br/>76-100
                 </div>
               </div>
             </div>
@@ -178,8 +188,8 @@ export const OverviewDashboard: React.FC = () => {
                   onClick={() => addMoodLog(option.type, option.type === 'thriving' ? 5 : option.type === 'good' ? 4 : option.type === 'okay' ? 3 : option.type === 'stressed' ? 2 : 1)}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 border border-slate-200 transition-all ${option.color} group`}
                 >
-                  <span className="text-3xl mb-2 transform group-hover:scale-120 transition-transform">
-                    {option.emoji}
+                  <span className="mb-2 transform group-hover:scale-115 transition-transform flex items-center justify-center">
+                    <PolarBearEmoji mood={option.type} size={44} />
                   </span>
                   <span className="text-xs font-semibold text-slate-700">
                     {option.label}
@@ -216,7 +226,7 @@ export const OverviewDashboard: React.FC = () => {
       {/* Feature Grid Cards (Matching WeMERGE HR summary stats layout) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Physical Health */}
-        <div 
+        <div
           onClick={() => setActiveTab('physical')}
           className="enterprise-card enterprise-card-hover p-5 border border-slate-200 cursor-pointer flex flex-col justify-between"
         >
@@ -234,7 +244,7 @@ export const OverviewDashboard: React.FC = () => {
         </div>
 
         {/* Boundary Guard */}
-        <div 
+        <div
           onClick={() => setActiveTab('boundary')}
           className="enterprise-card enterprise-card-hover p-5 border border-slate-200 cursor-pointer flex flex-col justify-between"
         >
@@ -252,7 +262,7 @@ export const OverviewDashboard: React.FC = () => {
         </div>
 
         {/* Peer Recognition */}
-        <div 
+        <div
           onClick={() => setActiveTab('social')}
           className="enterprise-card enterprise-card-hover p-5 border border-slate-200 cursor-pointer flex flex-col justify-between"
         >
@@ -270,7 +280,7 @@ export const OverviewDashboard: React.FC = () => {
         </div>
 
         {/* Cognitive Inclusivity */}
-        <div 
+        <div
           onClick={() => setActiveTab('inclusive')}
           className="enterprise-card enterprise-card-hover p-5 border border-slate-200 cursor-pointer flex flex-col justify-between"
         >

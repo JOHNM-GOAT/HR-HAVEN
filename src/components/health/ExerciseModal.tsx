@@ -11,17 +11,17 @@ export const ExerciseModal: React.FC = () => {
   const [stepIndex, setStepIndex] = useState(0);
 
   const steps = activeExercise === 'stretch' ? [
-    { title: 'Neck & Spine Alignment', desc: 'Slowly tilt your head to the right shoulder for 15 seconds, then left.', icon: '🧘' },
-    { title: 'Shoulder Blade Squeeze', desc: 'Roll shoulders back and squeeze shoulder blades together.', icon: '💪' },
-    { title: 'Wrist & Forearm Release', desc: 'Extend arms forward and gently pull fingers back.', icon: '🙌' },
-    { title: 'Deep Diaphragmatic Breath', desc: 'Inhale deeply for 4s, hold 4s, exhale slowly for 6s.', icon: '🌬️' }
+    { title: 'Neck & Spine Alignment', desc: 'Slowly tilt your head to the right shoulder for 15 seconds, then left.', icon: '🧘‍♂️' },
+    { title: 'Shoulder Blade Squeeze', desc: 'Roll shoulders back and squeeze shoulder blades together.', icon: '💆‍♂️' },
+    { title: 'Wrist & Forearm Release', desc: 'Extend arms forward and gently pull fingers back.', icon: '🖐️' },
+    { title: 'Deep Diaphragmatic Breath', desc: 'Inhale deeply for 4s, hold 4s, exhale slowly for 6s.', icon: '🫁' }
   ] : activeExercise === 'eye_rest' ? [
     { title: 'Focus 20 Feet Away', desc: 'Look out the window or across the room at an object 20 feet away.', icon: '👁️' },
     { title: 'Gentle Eye Palming', desc: 'Warm your palms together and place softly over closed eyes.', icon: '🤲' },
-    { title: 'Blink & Rehydrate', desc: 'Blink slowly 10 times to re-moisturize your eyes.', icon: '✨' }
+    { title: 'Blink & Rehydrate', desc: 'Blink slowly 10 times to re-moisturize your eyes.', icon: '💧' }
   ] : [
-    { title: 'Inhale Slowly (4s)', desc: 'Breathe in deep through your nose.', icon: '🌸' },
-    { title: 'Hold Breath (4s)', desc: 'Keep your body relaxed and lungs filled.', icon: '⏸️' },
+    { title: 'Inhale Slowly (4s)', desc: 'Breathe in deep through your nose.', icon: '🌬️' },
+    { title: 'Hold Breath (4s)', desc: 'Keep your body relaxed and lungs filled.', icon: '⏱️' },
     { title: 'Exhale Slowly (6s)', desc: 'Release tension through your mouth.', icon: '💨' }
   ];
 
