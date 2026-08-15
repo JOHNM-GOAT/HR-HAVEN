@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { UserRole } from '../../types/wellness';
+import { AxionLogo } from '../common/AxionLogo';
 import {
   User,
   Briefcase,
@@ -13,27 +14,35 @@ import {
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useWellness();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>('employee');
+  const { login, accounts, setToastNotification } = useWellness();
   const [email, setEmail] = useState('johnmicooh.ugot@axionhr.com');
   const [password, setPassword] = useState('••••••••••••');
-  const [repeatPassword, setRepeatPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(true);
 
-  const handleRoleChange = (role: UserRole) => {
-    setSelectedRole(role);
-    if (role === 'employee') {
-      setEmail('johnmicooh.ugot@axionhr.com');
-    } else {
-      setEmail('hr.director@axionhr.com');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login(selectedRole);
+    const targetAccount = accounts.find(a => a.email.toLowerCase() === email.trim().toLowerCase());
+    if (targetAccount) {
+      if (targetAccount.status === 'disabled') {
+        setToastNotification(`Access Denied: Account for ${targetAccount.name} is currently disabled.`);
+        return;
+      }
+      if (targetAccount.password && password !== '••••••••••••' && password !== targetAccount.password) {
+        setToastNotification('Authentication Failed: Incorrect password provided for this account.');
+        return;
+      }
+    }
+
+    const roleToLogin: UserRole = targetAccount
+      ? targetAccount.role
+      : email.toLowerCase().includes('admin')
+        ? 'admin'
+        : email.toLowerCase().includes('hr')
+          ? 'hr_manager'
+          : 'employee';
+
+    login(roleToLogin);
   };
 
   return (
@@ -50,11 +59,11 @@ export const LoginPage: React.FC = () => {
           <div className="lg:col-span-5 flex flex-col justify-between h-full py-4 pr-0 lg:pr-6">
             <div>
               {/* Logo Badge */}
-              <div className="flex items-center gap-2.5 mb-12">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-600/30">
-                  A
+              <div className="flex items-center gap-3 mb-12">
+                <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-blue-500/15 border border-slate-100">
+                  <AxionLogo className="w-8 h-8" />
                 </div>
-                <span className="text-xl font-bold tracking-tight text-slate-900">
+                <span className="text-2xl font-extrabold tracking-tight text-slate-900">
                   Axion<span className="text-blue-600">HR</span>
                 </span>
               </div>
@@ -77,48 +86,24 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-4 text-slate-500">
-                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors">Terms</a>
-                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors">Plans</a>
-                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors">Contact Us</a>
+                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors"></a>
+                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors"></a>
+                <a href="#" onClick={e => e.preventDefault()} className="hover:text-blue-600 transition-colors"></a>
               </div>
             </div>
           </div>
 
           {/* Right Column - Clean Floating Sign In / Sign Up Form */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 lg:p-9 border border-slate-100 shadow-xl shadow-slate-200/60">
-            {/* Header & Role Switcher */}
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                  {isSignUp ? 'Sign Up' : 'Sign In'}
+                  Sign In
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Your Workplace Well-being Platform
                 </p>
-              </div>
-
-              {/* Portal Mode Indicator Pill */}
-              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('employee')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedRole === 'employee'
-                      ? 'bg-white text-blue-600 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  Employee
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('hr_manager')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedRole === 'hr_manager'
-                      ? 'bg-white text-blue-600 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  HR Admin
-                </button>
               </div>
             </div>
 
@@ -141,11 +126,6 @@ export const LoginPage: React.FC = () => {
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-xs font-bold text-slate-700">Password</label>
-                  {!isSignUp && (
-                    <a href="#" onClick={e => e.preventDefault()} className="text-[11px] font-medium text-slate-400 hover:text-blue-600">
-                      Forgot Password?
-                    </a>
-                  )}
                 </div>
                 <div className="relative">
                   <input
@@ -165,89 +145,39 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Repeat Password (If Sign Up) */}
-              {isSignUp && (
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Repeat Password</label>
-                  <input
-                    type="password"
-                    value={repeatPassword}
-                    onChange={e => setRepeatPassword(e.target.value)}
-                    className="w-full bg-slate-50/80 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Terms Checkbox */}
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="acceptTerms"
-                  checked={acceptTerms}
-                  onChange={e => setAcceptTerms(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="acceptTerms" className="text-xs text-slate-500 cursor-pointer">
-                  I accept the <a href="#" onClick={e => e.preventDefault()} className="text-blue-600 font-bold hover:underline">Terms</a>
-                </label>
-              </div>
-
-
-
               {/* Main Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md shadow-blue-600/25 mt-2"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md shadow-blue-600/25 mt-2 cursor-pointer"
               >
-                {isSignUp ? 'Sign Up' : 'Sign In'}
+                Sign In
               </button>
             </form>
 
-            {/* Toggle Sign In / Sign Up Link */}
-            <div className="mt-5 text-center text-xs text-slate-500">
-              {isSignUp ? (
-                <span>
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setIsSignUp(false)}
-                    className="text-blue-600 font-bold hover:underline"
-                  >
-                    Sign In
-                  </button>
-                </span>
-              ) : (
-                <span>
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setIsSignUp(true)}
-                    className="text-blue-600 font-bold hover:underline"
-                  >
-                    Sign Up
-                  </button>
-                </span>
-              )}
-            </div>
-
             {/* Quick Demo Login Shortcut */}
-            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
               <span>Quick Demo Access:</span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={() => login('employee')}
-                  className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-all flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-all flex items-center gap-1 cursor-pointer text-xs"
                 >
                   <Zap className="w-3 h-3" /> Employee
                 </button>
                 <button
                   type="button"
                   onClick={() => login('hr_manager')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-all flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-all flex items-center gap-1 cursor-pointer text-xs"
                 >
-                  <Briefcase className="w-3 h-3" /> HR Admin
+                  <Briefcase className="w-3 h-3" /> HR Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => login('admin')}
+                  className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition-all flex items-center gap-1 cursor-pointer text-xs"
+                >
+                  <User className="w-3 h-3" /> System Admin
                 </button>
               </div>
             </div>

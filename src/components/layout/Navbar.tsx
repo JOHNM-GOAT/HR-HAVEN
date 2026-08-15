@@ -3,10 +3,10 @@
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { getBurnoutRiskConfig } from '../../types/wellness';
+import { AxionLogo } from '../common/AxionLogo';
 import { 
   ShieldAlert, 
   Moon, 
-  HeartHandshake,
   Zap,
   LogOut,
   Menu,
@@ -30,39 +30,38 @@ export const Navbar: React.FC = () => {
   const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
 
   return (
-    <header className="sticky top-0 z-50 shrink-0 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 lg:px-6 py-3 flex items-center justify-between shadow-xs">
-      {/* Brand & Logo Mobile indicator */}
-      <div className="flex items-center gap-3">
-        {/* Hamburger Menu Button */}
-        <button
-          onClick={() => toggleSidebar()}
-          className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95 flex items-center justify-center"
-          title="Toggle Navigation Menu"
-          aria-label="Toggle Navigation Menu"
-        >
-          {isSidebarOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5 text-slate-700" />}
-        </button>
-
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 md:hidden">
-            <HeartHandshake className="w-5 h-5 text-white" />
-          </div>
-          <div className="md:hidden">
-            <h1 className="text-base font-bold text-slate-900 tracking-tight">
-              Axion<span className="text-blue-600">HR</span> Haven
-            </h1>
-          </div>
-          <div className="hidden md:block">
-            <h2 className="text-lg font-bold text-slate-800 tracking-tight">
-              {userRole === 'hr_manager' ? 'HR Executive Portal' : 'Dashboard Overview'}
-            </h2>
-            <p className="text-xs text-slate-500">AxionHR AI Well-Being & Burnout Prevention</p>
-          </div>
+    <header className="sticky top-0 z-50 shrink-0 w-full bg-white/95 backdrop-blur-md px-4 lg:px-6 py-3 flex items-center justify-between shadow-xs">
+      {/* Integrated AxionHR Brand Logo & Hamburger Menu Button */}
+      <button
+        onClick={() => toggleSidebar()}
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 hover:bg-blue-50/80 hover:border-blue-200/90 transition-all active:scale-[0.98] group cursor-pointer shadow-2xs"
+        title={isSidebarOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
+        aria-label="Toggle Navigation Menu"
+      >
+        <div className="p-1 rounded-lg text-slate-600 group-hover:text-blue-600 transition-colors">
+          {isSidebarOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5" />}
         </div>
-      </div>
+        <div className="h-5 w-px bg-slate-200/80" />
+        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-200/60 group-hover:scale-105 transition-all">
+          <AxionLogo className="w-6 h-6" />
+        </div>
+        <div className="text-left">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-base font-extrabold text-slate-900 tracking-tight leading-none group-hover:text-blue-600 transition-colors">
+              Axion<span className="text-blue-600">HR</span>
+            </h1>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100/80 leading-none">
+              Haven
+            </span>
+          </div>
+          <p className="text-[10px] font-semibold text-slate-400 mt-0.5 group-hover:text-slate-600 transition-colors leading-none">
+            {userRole === 'admin' ? 'System Admin Portal' : userRole === 'hr_manager' ? 'HR Executive Portal' : 'AI Well-Being Platform'}
+          </p>
+        </div>
+      </button>
 
       {/* Center Actions / Status Pill (Employee View Only) */}
-      {userRole !== 'hr_manager' && (
+      {userRole === 'employee' && (
         <div className="hidden md:flex items-center gap-3">
           {/* Burnout Risk Badge */}
           <div 
@@ -92,7 +91,7 @@ export const Navbar: React.FC = () => {
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Adaptive Focus Mode Quick Toggle (Employee View Only) */}
-        {userRole !== 'hr_manager' && (
+        {userRole === 'employee' && (
           <button
             onClick={toggleFocusMode}
             className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${

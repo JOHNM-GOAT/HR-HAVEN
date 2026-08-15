@@ -1,4 +1,27 @@
-import { BurnoutMetrics, MoodLog, WellnessReminder, PeerBadge, ChatMessage, BoundaryGuardConfig, AccessibilitySettings } from '../types/wellness';
+import { BurnoutMetrics, MoodLog, WellnessReminder, PeerBadge, ChatMessage, BoundaryGuardConfig, AccessibilitySettings, UserAccount, UserProfile } from '../types/wellness';
+
+export const initialUserProfile: UserProfile = {
+  id: 'usr-001',
+  name: 'Alex Mercer',
+  email: 'johnmicooh.ugot@axionhr.com',
+  role: 'employee',
+  department: 'Engineering & Product',
+  jobTitle: 'Senior Full Stack Engineer',
+  phoneNumber: '+1 (555) 438-9210',
+  employeeId: 'AX-89421',
+  joinDate: 'January 15, 2024',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+  theme: 'light',
+  address: {
+    street: '742 Innovation Way, Suite 400',
+    city: 'San Francisco',
+    state: 'CA',
+    zipCode: '94107',
+    country: 'United States'
+  },
+  emergencyContactName: 'Taylor Mercer',
+  emergencyContactPhone: '+1 (555) 890-1234'
+};
 
 export const initialBurnoutMetrics: BurnoutMetrics = {
   overallScore: 68, // Moderate-high risk alert
@@ -103,4 +126,91 @@ export const teamBurnoutOverview = [
   { department: 'Customer Success', riskScore: 65, status: 'moderate', totalMembers: 12, overworkingCount: 4 },
   { department: 'Marketing & Growth', riskScore: 38, status: 'low', totalMembers: 10, overworkingCount: 0 },
   { department: 'Sales Operations', riskScore: 79, status: 'high', totalMembers: 16, overworkingCount: 8 }
+];
+
+export const initialUserAccounts: UserAccount[] = [
+  {
+    id: 'usr-001',
+    name: 'Alex Mercer',
+    email: 'johnmicooh.ugot@axionhr.com',
+    password: 'password123',
+    role: 'employee',
+    department: 'Engineering',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    createdAt: '2025-01-15',
+    lastActive: 'Just now'
+  },
+  {
+    id: 'usr-002',
+    name: 'Elena Rostova',
+    email: 'hr.director@axionhr.com',
+    password: 'password123',
+    role: 'hr_manager',
+    department: 'Human Resources',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    createdAt: '2024-11-01',
+    lastActive: '5 mins ago'
+  },
+  {
+    id: 'usr-003',
+    name: 'Marcus Vance',
+    email: 'admin.vance@axionhr.com',
+    password: 'password123',
+    role: 'admin',
+    department: 'Executive IT',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    createdAt: '2024-08-10',
+    lastActive: '12 mins ago'
+  },
+  {
+    id: 'usr-004',
+    name: 'Sarah Lin',
+    email: 'sarah.lin@axionhr.com',
+    password: 'password123',
+    role: 'employee',
+    department: 'Product Design',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    createdAt: '2025-02-10',
+    lastActive: '1 hour ago'
+  },
+  {
+    id: 'usr-005',
+    name: 'David Chen',
+    email: 'david.chen@axionhr.com',
+    password: 'password123',
+    role: 'employee',
+    department: 'Customer Success',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    createdAt: '2025-03-01',
+    lastActive: 'Yesterday'
+  },
+  {
+    id: 'usr-006',
+    name: 'Priya Sharma',
+    email: 'priya.sharma@axionhr.com',
+    password: 'password123',
+    role: 'hr_manager',
+    department: 'Human Resources',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+    createdAt: '2025-01-20',
+    lastActive: '3 hours ago'
+  },
+  {
+    id: 'usr-007',
+    name: 'Robert Sterling',
+    email: 'r.sterling@axionhr.com',
+    password: 'password123',
+    role: 'employee',
+    department: 'Sales Operations',
+    status: 'disabled',
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    createdAt: '2024-09-15',
+    lastActive: '2 weeks ago'
+  }
 ];

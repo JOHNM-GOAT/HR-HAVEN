@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ChevronDown,
   RotateCw,
+  RotateCcw,
   Plus,
   History,
   Sparkles,
@@ -73,7 +74,7 @@ const moodOptionsList: MoodOption[] = [
 ];
 
 export const MoodHistoryScrollWheel: React.FC = () => {
-  const { moodLogs, addMoodLog } = useWellness();
+  const { moodLogs, addMoodLog, isDarkMode } = useWellness();
   const [viewMode, setViewMode] = useState<'history' | 'quick_log'>('history');
   const [activeFilter, setActiveFilter] = useState<'all' | MoodType>('all');
   const [activeIndex, setActiveIndex] = useState<number>(0);
@@ -234,92 +235,98 @@ export const MoodHistoryScrollWheel: React.FC = () => {
 
   const mostFrequentMood = moodLogs.length
     ? Object.entries(
-        moodLogs.reduce((acc: Record<string, number>, log) => {
-          acc[log.mood] = (acc[log.mood] || 0) + 1;
-          return acc;
-        }, {})
-      ).sort((a, b) => b[1] - a[1])[0][0]
+      moodLogs.reduce((acc: Record<string, number>, log) => {
+        acc[log.mood] = (acc[log.mood] || 0) + 1;
+        return acc;
+      }, {})
+    ).sort((a, b) => b[1] - a[1])[0][0]
     : 'None';
 
   return (
-    <div className="enterprise-card p-5 border border-slate-200 flex flex-col justify-between h-[560px] select-none relative overflow-hidden bg-gradient-to-b from-white via-slate-50/50 to-white shadow-xs">
+    <div className={`enterprise-card p-5 border flex flex-col justify-between h-[560px] select-none relative overflow-hidden shadow-xs ${isDarkMode
+      ? 'bg-[#202229] border-[#2e323d] text-slate-100'
+      : 'bg-gradient-to-b from-white via-slate-50/50 to-white border-slate-200 text-slate-900'
+      }`}>
 
       {/* Header */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shadow-2xs">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center border shadow-2xs ${isDarkMode
+              ? 'bg-blue-950/60 text-blue-400 border-blue-800'
+              : 'bg-blue-50 text-blue-600 border-blue-200'
+              }`}>
               <Smile className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+              <h3 className={`text-sm font-bold tracking-tight flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'
+                }`}>
                 Mood History Wheel
                 <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               </h3>
-              <p className="text-[11px] text-slate-500">
-                {viewMode === 'history' ? 'Wheel drum history picker' : 'Spin to log today’s mood'}
-              </p>
+
             </div>
           </div>
 
-          <span className="text-[10px] text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 font-semibold flex items-center gap-1 shrink-0">
-            <Lock className="w-3 h-3 text-blue-600" /> Anonymous
-          </span>
+          <div className="flex items-center gap-1">
+
+          </div>
         </div>
 
-        {/* View Mode Toggle Switch */}
-        <div className="flex items-center p-1 bg-slate-100/80 rounded-xl border border-slate-200/80 mb-3">
+        {/* View Mode Toggle (Wheel History vs Quick Log) */}
+        <div className={`flex rounded-xl p-1 border mb-3 ${isDarkMode ? 'bg-[#1a1c22] border-[#2e323d]' : 'bg-slate-100/90 border-slate-200/80'
+          }`}>
           <button
             onClick={() => setViewMode('history')}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              viewMode === 'history'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${viewMode === 'history'
+              ? isDarkMode ? 'bg-[#202229] text-white shadow-sm border border-slate-700' : 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+              : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+              }`}
           >
-            <History className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5" />
             <span>History Wheel</span>
           </button>
           <button
             onClick={() => setViewMode('quick_log')}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              viewMode === 'quick_log'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${viewMode === 'quick_log'
+              ? isDarkMode ? 'bg-[#202229] text-white shadow-sm border border-slate-700' : 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+              : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+              }`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Log Check-In</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>+ Log Check-In</span>
           </button>
         </div>
 
-        {/* Filters (History Mode only) */}
+        {/* Filter Pills (History View) */}
         {viewMode === 'history' && (
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-2 pt-0.5 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all shrink-0 ${
-                activeFilter === 'all'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-              }`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all border cursor-pointer ${activeFilter === 'all'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                : isDarkMode
+                  ? 'bg-[#1a1c22] text-slate-400 border-[#2e323d] hover:border-slate-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
             >
               All ({moodLogs.length})
             </button>
-            {(['thriving', 'good', 'okay', 'stressed', 'exhausted'] as MoodType[]).map(m => {
-              const count = moodLogs.filter(l => l.mood === m).length;
-              if (count === 0 && activeFilter !== m) return null;
+            {(['thriving', 'good', 'okay', 'stressed', 'exhausted'] as MoodType[]).map(type => {
+              const count = moodLogs.filter(m => m.mood === type).length;
+              if (count === 0) return null;
               return (
                 <button
-                  key={m}
-                  onClick={() => setActiveFilter(m)}
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full border capitalize transition-all shrink-0 ${
-                    activeFilter === m
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                  }`}
+                  key={type}
+                  onClick={() => setActiveFilter(type)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize shrink-0 transition-all border cursor-pointer ${activeFilter === type
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                    : isDarkMode
+                      ? 'bg-[#1a1c22] text-slate-400 border-[#2e323d] hover:border-slate-600'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}
                 >
-                  {m} ({count})
+                  {type} ({count})
                 </button>
               );
             })}
@@ -327,7 +334,7 @@ export const MoodHistoryScrollWheel: React.FC = () => {
         )}
       </div>
 
-      {/* 3D Wheel Container */}
+      {/* 3D DRUM SCROLL WHEEL VIEWPORT */}
       <div
         ref={containerRef}
         onWheel={handleWheel}
@@ -338,11 +345,14 @@ export const MoodHistoryScrollWheel: React.FC = () => {
         className="relative flex-1 my-2 perspective-container flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden"
       >
         {/* Gradient backdrop guide lines for wheel drum effect */}
-        <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-white via-white/80 to-transparent z-20 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/80 to-transparent z-20 pointer-events-none" />
+        <div className={`absolute inset-x-0 top-0 h-14 bg-gradient-to-b ${isDarkMode ? 'from-[#202229] via-[#202229]/80 to-transparent' : 'from-white via-white/80 to-transparent'
+          } z-20 pointer-events-none`} />
+        <div className={`absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t ${isDarkMode ? 'from-[#202229] via-[#202229]/80 to-transparent' : 'from-white via-white/80 to-transparent'
+          } z-20 pointer-events-none`} />
 
         {/* Center active focus indicator box */}
-        <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-[100px] border-2 border-blue-500/30 bg-blue-50/40 rounded-2xl shadow-inner pointer-events-none z-0 transition-all backdrop-blur-[1px]">
+        <div className={`absolute inset-x-2 top-1/2 -translate-y-1/2 h-[100px] border-2 ${isDarkMode ? 'border-blue-500/40 bg-blue-950/30' : 'border-blue-500/30 bg-blue-50/40'
+          } rounded-2xl shadow-inner pointer-events-none z-0 transition-all backdrop-blur-[1px]`}>
           <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-6 bg-blue-600 rounded-r-md shadow-xs" />
           <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-6 bg-blue-600 rounded-l-md shadow-xs" />
         </div>
@@ -352,8 +362,10 @@ export const MoodHistoryScrollWheel: React.FC = () => {
           <div className="w-full h-full relative flex items-center justify-center preserve-3d">
             {filteredLogs.length === 0 ? (
               <div className="text-center p-6 z-30">
-                <Smile className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-500 font-medium">No mood history entries matching filter.</p>
+                <Smile className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  No mood history entries matching filter.
+                </p>
                 <button
                   onClick={() => setViewMode('quick_log')}
                   className="mt-3 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold"
@@ -387,11 +399,14 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                         ? 'transform 0.08s ease-out, opacity 0.08s ease-out'
                         : 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out'
                     }}
-                    className={`absolute inset-x-3 p-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${
-                      distance === 0
-                        ? 'bg-white border-2 border-blue-500 shadow-lg ring-4 ring-blue-500/10'
-                        : 'bg-slate-100/90 border border-slate-300/80 shadow-xs'
-                    }`}
+                    className={`absolute inset-x-3 p-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${distance === 0
+                      ? isDarkMode
+                        ? 'bg-slate-800 border-2 border-blue-500 shadow-lg ring-4 ring-blue-500/20 text-white'
+                        : 'bg-white border-2 border-blue-500 shadow-lg ring-4 ring-blue-500/10 text-slate-900'
+                      : isDarkMode
+                        ? 'bg-slate-800/80 border border-slate-700/80 text-slate-300 shadow-xs'
+                        : 'bg-slate-100/90 border border-slate-300/80 text-slate-800 shadow-xs'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="shrink-0 pt-0.5 transform transition-transform duration-300">
@@ -399,36 +414,40 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-extrabold text-slate-900 capitalize flex items-center gap-1.5">
+                          <h4 className={`text-xs font-extrabold capitalize flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'
+                            }`}>
                             {log.mood}
                             {distance === 0 && (
-                              <span className="text-[9px] px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 font-bold uppercase tracking-wider">
+                              <span className={`text-[9px] px-2 py-0.2 rounded-full font-bold uppercase tracking-wider ${isDarkMode ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
                                 Active Focus
                               </span>
                             )}
                           </h4>
-                          <span className="text-[10px] text-slate-400 font-medium shrink-0">{log.timestamp}</span>
+                          <span className={`text-[10px] font-medium shrink-0 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>{log.timestamp}</span>
                         </div>
 
                         {log.note && (
-                          <p className="text-xs text-slate-600 mt-1 line-clamp-1 italic font-medium">
+                          <p className={`text-xs mt-1 line-clamp-1 italic font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                            }`}>
                             "{log.note}"
                           </p>
                         )}
 
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Energy:</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>Energy:</span>
                           <div className="flex gap-1">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <div
                                 key={i}
-                                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                                  i < log.energyLevel
-                                    ? distance === 0
-                                      ? 'bg-blue-600 shadow-2xs scale-110'
-                                      : 'bg-blue-400'
-                                    : 'bg-slate-200'
-                                }`}
+                                className={`w-2.5 h-2.5 rounded-full transition-all ${i < log.energyLevel
+                                  ? distance === 0
+                                    ? 'bg-blue-600 shadow-2xs scale-110'
+                                    : 'bg-blue-400'
+                                  : isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
+                                  }`}
                               />
                             ))}
                           </div>
@@ -472,11 +491,14 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                       ? 'transform 0.08s ease-out, opacity 0.08s ease-out'
                       : 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out'
                   }}
-                  className={`absolute inset-x-3 p-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${
-                    distance === 0
-                      ? `bg-white border-2 ${opt.borderColor} shadow-lg ring-4 ring-blue-500/10`
-                      : 'bg-slate-100/90 border border-slate-300/80 shadow-xs'
-                  }`}
+                  className={`absolute inset-x-3 p-3.5 rounded-2xl transition-all duration-200 cursor-pointer ${distance === 0
+                    ? isDarkMode
+                      ? `bg-slate-800 border-2 ${opt.borderColor} shadow-lg ring-4 ring-blue-500/20 text-white`
+                      : `bg-white border-2 ${opt.borderColor} shadow-lg ring-4 ring-blue-500/10 text-slate-900`
+                    : isDarkMode
+                      ? 'bg-slate-800/80 border border-slate-700/80 text-slate-300 shadow-xs'
+                      : 'bg-slate-100/90 border border-slate-300/80 text-slate-800 shadow-xs'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="shrink-0">
@@ -484,12 +506,15 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold text-slate-900 capitalize">{opt.label}</h4>
-                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                        <h4 className={`text-xs font-bold capitalize ${isDarkMode ? 'text-white' : 'text-slate-900'
+                          }`}>{opt.label}</h4>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isDarkMode ? 'text-blue-300 bg-blue-950/60 border border-blue-800/50' : 'text-blue-600 bg-blue-50 border border-blue-100'
+                          }`}>
                           Energy Level {opt.defaultEnergy}/5
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{opt.description}</p>
+                      <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                        }`}>{opt.description}</p>
                     </div>
                   </div>
                 </div>
@@ -502,7 +527,8 @@ export const MoodHistoryScrollWheel: React.FC = () => {
       {/* Wheel Control Nav Bar & Form Input */}
       <div>
         {/* Navigation & Spin Wheel Controls */}
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 mb-2.5">
+        <div className={`flex items-center justify-between rounded-xl px-3 py-1.5 mb-2.5 border ${isDarkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
+          }`}>
           <div className="flex items-center gap-1">
             <button
               onClick={() => {
@@ -516,7 +542,8 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                   });
                 }
               }}
-              className="p-1 rounded-lg hover:bg-slate-200 text-slate-700 transition-all active:scale-95"
+              className={`p-1 rounded-lg transition-all active:scale-95 cursor-pointer ${isDarkMode ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-200 text-slate-700'
+                }`}
               title="Scroll Up"
             >
               <ChevronUp className="w-4 h-4" />
@@ -535,14 +562,16 @@ export const MoodHistoryScrollWheel: React.FC = () => {
                   });
                 }
               }}
-              className="p-1 rounded-lg hover:bg-slate-200 text-slate-700 transition-all active:scale-95"
+              className={`p-1 rounded-lg transition-all active:scale-95 cursor-pointer ${isDarkMode ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-200 text-slate-700'
+                }`}
               title="Scroll Down"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>
 
-          <span className="text-[11px] text-slate-600 font-bold tracking-tight">
+          <span className={`text-[11px] font-bold tracking-tight ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+            }`}>
             {viewMode === 'history' ? (
               filteredLogs.length > 0 ? (
                 `Entry ${activeIndex + 1} of ${filteredLogs.length}`
@@ -557,9 +586,10 @@ export const MoodHistoryScrollWheel: React.FC = () => {
           <button
             onClick={handleSpinWheel}
             disabled={isSpinning}
-            className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all ${
-              isSpinning ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${isDarkMode
+              ? 'bg-blue-950/60 text-blue-300 border-blue-800 hover:bg-blue-900/60'
+              : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+              } ${isSpinning ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <RotateCw className={`w-3.5 h-3.5 ${isSpinning ? 'animate-spin' : ''}`} />
             <span>Spin Dial</span>
@@ -568,13 +598,16 @@ export const MoodHistoryScrollWheel: React.FC = () => {
 
         {/* Quick Log Form Extensions (when in Quick Log mode) */}
         {viewMode === 'quick_log' && (
-          <div className="space-y-2 pt-2 border-t border-slate-100">
+          <div className={`space-y-2 pt-2 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-100'
+            }`}>
             {/* Energy Slider */}
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-600 font-semibold flex items-center gap-1">
+              <span className={`font-semibold flex items-center gap-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                }`}>
                 <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" /> Energy Level:
               </span>
-              <span className="font-bold text-blue-700">{customEnergy} / 5</span>
+              <span className={`font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-700'
+                }`}>{customEnergy} / 5</span>
             </div>
             <input
               type="range"
@@ -583,7 +616,8 @@ export const MoodHistoryScrollWheel: React.FC = () => {
               step="1"
               value={customEnergy}
               onChange={e => handleEnergySliderChange(parseInt(e.target.value, 10))}
-              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 transition-all"
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 transition-all ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'
+                }`}
             />
 
             {/* Optional Note */}
@@ -592,12 +626,15 @@ export const MoodHistoryScrollWheel: React.FC = () => {
               value={customNote}
               onChange={e => setCustomNote(e.target.value)}
               placeholder="Add optional note (e.g., 'Finished sprint demo!')..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
+              className={`w-full border rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-blue-600 ${isDarkMode
+                ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+                : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
             />
 
             <button
               onClick={handleConfirmLog}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
               <CheckCircle className="w-4 h-4" />
               <span>Log Mood Entry Anonymously</span>
@@ -607,14 +644,15 @@ export const MoodHistoryScrollWheel: React.FC = () => {
 
         {/* History Analytics Summary Bar (History Mode) */}
         {viewMode === 'history' && (
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className={`pt-2 border-t flex items-center justify-between text-[11px] ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'
+            }`}>
             <div className="flex items-center gap-1.5">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
-              <span>Avg Energy: <strong className="text-slate-800">{avgEnergy}/5</strong></span>
+              <span>Avg Energy: <strong className={isDarkMode ? 'text-white' : 'text-slate-800'}>{avgEnergy}/5</strong></span>
             </div>
             <div className="flex items-center gap-1">
-              <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
-              <span>Top: <strong className="text-slate-800 capitalize">{mostFrequentMood}</strong></span>
+              <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
+              <span>Top: <strong className={`capitalize ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{mostFrequentMood}</strong></span>
             </div>
           </div>
         )}

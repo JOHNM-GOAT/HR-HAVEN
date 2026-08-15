@@ -3,13 +3,13 @@
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { getBurnoutRiskConfig } from '../../types/wellness';
-import { 
-  Activity, 
-  Clock, 
-  Calendar, 
-  Mail, 
-  AlertTriangle, 
-  TrendingUp, 
+import {
+  Activity,
+  Clock,
+  Calendar,
+  Mail,
+  AlertTriangle,
+  TrendingUp,
   Sparkles,
   ShieldAlert,
   Info
@@ -35,17 +35,13 @@ export const PredictiveAnalyticsView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1.5 mb-2">
-            <Sparkles className="w-3.5 h-3.5" /> AI Predictive Analytics Engine
-          </span>
+
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             AI Burnout Risk Predictor
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Analyzes non-invasive workplace telemetry to protect employees before burnout strikes.
-          </p>
+
         </div>
-        
+
         <div className={`px-4 py-2.5 rounded-xl border flex items-center gap-3 ${riskConfig.badgeBg}`}>
           <ShieldAlert className="w-6 h-6 shrink-0" />
           <div>
@@ -143,7 +139,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               Weekly Workload Telemetry Trend
             </h3>
-            <p className="text-xs text-slate-500">Comparison of Meeting Density vs. Late-Night Activity</p>
+
           </div>
           <div className="flex items-center gap-4 text-xs font-semibold">
             <span className="flex items-center gap-1.5 text-blue-700">
@@ -160,18 +156,18 @@ export const PredictiveAnalyticsView: React.FC = () => {
             <AreaChart data={weeklyTelemetryData}>
               <defs>
                 <linearGradient id="colorMeetings" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="day" stroke="#64748b" fontSize={12} />
               <YAxis stroke="#64748b" fontSize={12} />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '12px', color: '#0f172a' }}
               />
               <Area type="monotone" dataKey="meetingHours" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorMeetings)" name="Meeting Hours" />

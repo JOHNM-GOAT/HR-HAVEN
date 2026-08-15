@@ -2,15 +2,22 @@
 
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { 
-  Moon, 
-  Clock, 
-  Mail, 
-  BellOff
+import {
+  Moon,
+  Clock,
+  Mail,
+  BellOff,
+  Bell,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 
+import { ElectricPlasmaShield } from './ElectricPlasmaShield';
+
 export const BoundaryGuardView: React.FC = () => {
-  const { boundaryConfig, toggleBoundaryShield, updateQuietHours } = useWellness();
+  const { boundaryConfig, toggleBoundaryShield, updateQuietHours, isDarkMode } = useWellness();
   const [startTime, setStartTime] = useState(boundaryConfig.quietHoursStart);
   const [endTime, setEndTime] = useState(boundaryConfig.quietHoursEnd);
 
@@ -23,99 +30,98 @@ export const BoundaryGuardView: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <span className="text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-block mb-2">
-          Work-Life Boundary Guard
-        </span>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           After-Hours Communication & Disconnect Shield
         </h2>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
           Detects late-night emails and Slack messages past designated work hours, holding non-urgent notifications to protect rest & recovery.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Control Card */}
-        <div className="enterprise-card p-6 border border-slate-200 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Moon className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">Shield Status</h3>
-              </div>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                boundaryConfig.activeShield 
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+        {/* Main Control Card with Electric Plasma Shield */}
+        <div className={`enterprise-card p-6 border flex flex-col justify-between ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white shadow-xl' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
+          }`}>
+          {/* Top Header Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Moon className="w-5 h-5 text-blue-500" />
+              <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                Shield Status
+              </h3>
+            </div>
+            <button
+              onClick={toggleBoundaryShield}
+              className={`text-xs font-bold px-3 py-1 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${boundaryConfig.activeShield
+                ? isDarkMode
+                  ? 'bg-blue-950/60 text-blue-300 border-blue-800'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                : isDarkMode
+                  ? 'bg-slate-800 text-slate-400 border-slate-700'
                   : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>
-                {boundaryConfig.activeShield ? 'ACTIVE' : 'PAUSED'}
-              </span>
-            </div>
-
-            <div className="my-6 text-center">
-              <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center border-4 transition-all ${
-                boundaryConfig.activeShield 
-                  ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm'
-                  : 'border-slate-200 bg-slate-100 text-slate-400'
-              }`}>
-                <BellOff className="w-10 h-10" />
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mt-4">
-                {boundaryConfig.activeShield ? 'Boundary Shield Engaged' : 'Shield Disabled'}
-              </h4>
-              <p className="text-xs text-slate-500 mt-1">
-                {boundaryConfig.activeShield 
-                  ? `Late notifications held between ${boundaryConfig.quietHoursStart} - ${boundaryConfig.quietHoursEnd}`
-                  : 'Notifications will arrive immediately anytime.'}
-              </p>
-            </div>
+                }`}
+              title="Click to toggle Shield status"
+            >
+              {boundaryConfig.activeShield ? 'ACTIVE' : 'PAUSED'}
+            </button>
           </div>
 
-          <button
-            onClick={toggleBoundaryShield}
-            className={`w-full py-3 rounded-xl font-bold text-xs transition-all shadow-xs ${
-              boundaryConfig.activeShield
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-          >
-            {boundaryConfig.activeShield ? 'Pause Boundary Guard' : 'Enable Boundary Guard'}
-          </button>
+          {/* Animated Electric Plasma Lightning Sphere */}
+          <div className="my-3">
+            <ElectricPlasmaShield />
+          </div>
+
+          {/* Bottom Rounded Pill Action Button matching Screenshot */}
+
         </div>
 
         {/* Quiet Hours & Delayed Queue Details */}
-        <div className="enterprise-card p-6 border border-slate-200 lg:col-span-2 space-y-6">
+        <div className={`enterprise-card p-6 border lg:col-span-2 space-y-6 ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
           {/* Quiet Hours Schedule Form */}
           <div>
-            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-600" />
+            <h3 className={`text-base font-bold mb-1 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'
+              }`}>
+              <Clock className="w-5 h-5 text-blue-500" />
               Quiet Hours Schedule
             </h3>
-            <p className="text-xs text-slate-500 mb-4">Set your personal quiet hours to block evening work alerts.</p>
+            <p className={`text-xs mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Set your personal quiet hours to block evening work alerts.
+            </p>
 
             <form onSubmit={handleSaveHours} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Evening Disconnect Start</label>
+                <label className={`text-xs font-bold block mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Evening Disconnect Start
+                </label>
                 <input
                   type="time"
                   value={startTime}
                   onChange={e => setStartTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  className={`w-full rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-500 transition-colors border ${isDarkMode
+                    ? 'bg-[#1a1c22] border-[#2e323d] text-white focus:bg-[#12141a]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                    }`}
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Morning Re-engage End</label>
+                <label className={`text-xs font-bold block mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Morning Re-engage End
+                </label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={e => setEndTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  className={`w-full rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-500 transition-colors border ${isDarkMode
+                    ? 'bg-[#1a1c22] border-[#2e323d] text-white focus:bg-[#12141a]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                    }`}
                 />
               </div>
               <div className="sm:col-span-2 flex justify-end">
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm cursor-pointer active:scale-95"
                 >
                   Save Schedule
                 </button>
@@ -124,32 +130,47 @@ export const BoundaryGuardView: React.FC = () => {
           </div>
 
           {/* Currently Held Messages Queue */}
-          <div className="pt-4 border-t border-slate-100">
+          <div className={`pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-blue-600" />
+              <h4 className={`text-xs font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'
+                }`}>
+                <Mail className="w-4 h-4 text-blue-500" />
                 Delayed Messages Queue (Held for Morning)
               </h4>
-              <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-blue-950/60 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'
+                }`}>
                 {boundaryConfig.delayedMessagesCount} Held
               </span>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className={`p-4 rounded-xl border space-y-2 ${isDarkMode ? 'bg-[#1a1c22] border-[#2e323d]' : 'bg-slate-50 border-slate-200'
+              }`}>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-800 font-semibold">Slack: #engineering-sync (3 messages)</span>
-                <span className="text-[10px] text-slate-400 font-medium">Held since 8:14 PM</span>
+                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Slack: #engineering-sync (3 messages)
+                </span>
+                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Held since 8:14 PM
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-800 font-semibold">Email: Q3 Release Roadmap Update</span>
-                <span className="text-[10px] text-slate-400 font-medium">Held since 9:02 PM</span>
+                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Email: Q3 Release Roadmap Update
+                </span>
+                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Held since 9:02 PM
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-800 font-semibold">Jira: Ticket #AX-204 Assignee update</span>
-                <span className="text-[10px] text-slate-400 font-medium">Held since 10:15 PM</span>
+                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Jira: Ticket #AX-204 Assignee update
+                </span>
+                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Held since 10:15 PM
+                </span>
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 mt-2">
+            <p className={`text-[11px] mt-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               All held notifications will automatically flush to your inbox tomorrow at {boundaryConfig.quietHoursEnd}.
             </p>
           </div>
@@ -158,3 +179,4 @@ export const BoundaryGuardView: React.FC = () => {
     </div>
   );
 };
+

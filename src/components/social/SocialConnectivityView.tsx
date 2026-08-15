@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { PeerBadge } from '../../types/wellness';
-import { 
-  Award, 
-  Coffee, 
-  Send, 
-  UserCheck, 
-  ShieldAlert, 
+import {
+  Award,
+  Coffee,
+  Send,
+  UserCheck,
+  ShieldAlert,
   Sparkles
 } from 'lucide-react';
 
@@ -52,15 +52,11 @@ export const SocialConnectivityView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-2">
-            Social Connectivity Hub
-          </span>
+
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             Peer Appreciation & Caring Support
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Build strong workplace connection by giving appreciation badges, virtual coffees, or privately suggesting HR support for a colleague.
-          </p>
+
         </div>
 
         <button
@@ -157,11 +153,10 @@ export const SocialConnectivityView: React.FC = () => {
                       key={b.type}
                       type="button"
                       onClick={() => setBadgeType(b.type)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all ${
-                        badgeType === b.type
-                          ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold'
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
+                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all ${badgeType === b.type
+                        ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
                     >
                       <span className="text-xl">{b.icon}</span>
                       <span className="text-xs">{b.label}</span>
@@ -182,7 +177,7 @@ export const SocialConnectivityView: React.FC = () => {
               </div>
 
               {/* Include Virtual Coffee Toggle */}
-              <div 
+              <div
                 onClick={() => setSendCoffee(!sendCoffee)}
                 className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer"
               >
@@ -234,8 +229,8 @@ export const SocialConnectivityView: React.FC = () => {
 
                   <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5">
                     {badge.badgeType === 'lifesaver' ? '🆘 Lifesaver' :
-                     badge.badgeType === 'focus_champion' ? '🎯 Focus Champion' :
-                     badge.badgeType === 'team_anchor' ? '⚓ Team Anchor' : '🌟 Positive Energy'}
+                      badge.badgeType === 'focus_champion' ? '🎯 Focus Champion' :
+                        badge.badgeType === 'team_anchor' ? '⚓ Team Anchor' : '🌟 Positive Energy'}
                   </span>
                 </div>
 

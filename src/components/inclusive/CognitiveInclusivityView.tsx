@@ -11,6 +11,7 @@ import {
   Pause,
   RotateCcw
 } from 'lucide-react';
+import { CrystalWaveTimer } from '../focus/CrystalWaveTimer';
 
 export const CognitiveInclusivityView: React.FC = () => {
   const {
@@ -21,28 +22,13 @@ export const CognitiveInclusivityView: React.FC = () => {
     toggleBatchNotifications,
     toggleClutterReduction,
     setAmbientSound,
-    setToastNotification
+    setToastNotification,
+    pomodoro,
+    togglePomodoro,
+    resetPomodoro,
+    setPomodoroMode,
+    isDarkMode
   } = useWellness();
-
-  // Pomodoro timer state
-  const [focusSeconds, setFocusSeconds] = useState(25 * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-
-  useEffect(() => {
-    if (!isTimerRunning) return;
-    const interval = setInterval(() => {
-      setFocusSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsTimerRunning(false);
-          setToastNotification('Deep focus session complete! Take a 5-minute physical stretch break.');
-          return 25 * 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isTimerRunning, setToastNotification]);
 
   const soundOptions: { id: AccessibilitySettings['ambientSound']; label: string; icon: string }[] = [
     { id: 'none', label: 'Mute', icon: '🔇' },
@@ -56,15 +42,10 @@ export const CognitiveInclusivityView: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <span className="text-[11px] uppercase font-bold tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-block mb-2">
-          Cognitive Inclusivity & Focus Suite
-        </span>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
           Adaptive Focus Mode & Accessibility Controls
         </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Customizes your workspace for different working styles, including neurodivergent users (ADHD, Dyslexia, Sensory sensitivity).
-        </p>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -78,8 +59,8 @@ export const CognitiveInclusivityView: React.FC = () => {
             <button
               onClick={toggleFocusMode}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${accessibility.focusModeActive
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                 }`}
             >
               Adaptive Focus Shield: {accessibility.focusModeActive ? 'ACTIVE' : 'OFF'}
@@ -91,8 +72,8 @@ export const CognitiveInclusivityView: React.FC = () => {
             <div
               onClick={toggleDyslexiaFont}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.dyslexiaFont
-                  ? 'bg-blue-50 border-blue-400 text-blue-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                ? 'bg-blue-50 border-blue-400 text-blue-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -108,8 +89,8 @@ export const CognitiveInclusivityView: React.FC = () => {
             <div
               onClick={toggleHighContrast}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.highContrast
-                  ? 'bg-blue-50 border-blue-400 text-blue-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                ? 'bg-blue-50 border-blue-400 text-blue-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -125,8 +106,8 @@ export const CognitiveInclusivityView: React.FC = () => {
             <div
               onClick={toggleBatchNotifications}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.batchNotifications
-                  ? 'bg-blue-50 border-blue-400 text-blue-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                ? 'bg-blue-50 border-blue-400 text-blue-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -142,8 +123,8 @@ export const CognitiveInclusivityView: React.FC = () => {
             <div
               onClick={toggleClutterReduction}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.reducedMotion
-                  ? 'bg-blue-50 border-blue-400 text-blue-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                ? 'bg-blue-50 border-blue-400 text-blue-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -169,8 +150,8 @@ export const CognitiveInclusivityView: React.FC = () => {
                   key={sound.id}
                   onClick={() => setAmbientSound(sound.id)}
                   className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${accessibility.ambientSound === sound.id
-                      ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                 >
                   <span className="text-2xl">{sound.icon}</span>
@@ -182,37 +163,59 @@ export const CognitiveInclusivityView: React.FC = () => {
         </div>
 
         {/* Right Column: Deep Focus Timer Card */}
-        <div className="enterprise-card p-6 border border-slate-200 flex flex-col justify-between items-center text-center">
+        <div className={`enterprise-card p-6 border flex flex-col justify-between items-center text-center ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
           <div className="w-full">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 inline-block mb-3">
-              Deep Focus Session
-            </span>
-            <h3 className="text-lg font-bold text-slate-900">Pomodoro Timer</h3>
-            <p className="text-xs text-slate-500 mt-1">25-minute focus, 5-minute rest</p>
 
-            <div className="my-8 relative flex items-center justify-center">
-              <div className="w-44 h-44 rounded-full border-4 border-blue-500 flex items-center justify-center bg-slate-50 shadow-inner">
-                <span className="text-4xl font-black text-slate-900 tracking-tight">
-                  {Math.floor(focusSeconds / 60)}:{String(focusSeconds % 60).padStart(2, '0')}
-                </span>
-              </div>
+            <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              Pomodoro Focus Timer
+            </h3>
+
+
+            <div className="my-6 relative flex items-center justify-center">
+              <CrystalWaveTimer size={210} />
+            </div>
+
+            {/* Quick Mode Toggle */}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <button
+                onClick={() => setPomodoroMode('focus')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${pomodoro.mode === 'focus'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : isDarkMode ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}
+              >
+                25m Focus
+              </button>
+              <button
+                onClick={() => setPomodoroMode('break')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${pomodoro.mode === 'break'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : isDarkMode ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}
+              >
+                5m Break
+              </button>
             </div>
           </div>
 
           <div className="flex items-center gap-3 w-full">
             <button
-              onClick={() => setIsTimerRunning(!isTimerRunning)}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs"
+              onClick={togglePomodoro}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs text-white transition-all shadow-xs cursor-pointer active:scale-95 ${pomodoro.mode === 'break'
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-blue-600 hover:bg-blue-700'
+                }`}
             >
-              {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
-              <span>{isTimerRunning ? 'Pause Session' : 'Start 25m Focus'}</span>
+              {pomodoro.isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+              <span>{pomodoro.isRunning ? 'Pause Session' : pomodoro.secondsRemaining === pomodoro.totalSeconds ? 'Start Session' : 'Resume'}</span>
             </button>
             <button
-              onClick={() => {
-                setFocusSeconds(25 * 60);
-                setIsTimerRunning(false);
-              }}
-              className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              onClick={resetPomodoro}
+              className={`p-3 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                }`}
               title="Reset Timer"
             >
               <RotateCcw className="w-4 h-4" />

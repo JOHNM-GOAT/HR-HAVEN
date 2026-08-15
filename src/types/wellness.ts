@@ -1,4 +1,17 @@
-export type UserRole = 'employee' | 'hr_manager';
+export type UserRole = 'admin' | 'hr_manager' | 'employee';
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: UserRole;
+  department: string;
+  status: 'active' | 'disabled';
+  avatarUrl?: string;
+  createdAt: string;
+  lastActive: string;
+}
 
 export type BurnoutRiskLevel = 'low' | 'normal' | 'moderate' | 'high';
 
@@ -124,4 +137,40 @@ export interface BoundaryGuardConfig {
   quietHoursEnd: string;   // e.g. "08:00"
   delayedMessagesCount: number;
   autoReplyMessage: string;
+}
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+export interface UserAddress {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  jobTitle: string;
+  phoneNumber: string;
+  address: UserAddress;
+  avatarUrl: string;
+  theme: ThemeMode;
+  employeeId: string;
+  joinDate: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+}
+
+export interface PomodoroTimer {
+  secondsRemaining: number;
+  totalSeconds: number;
+  isRunning: boolean;
+  mode: 'focus' | 'break';
+  isMinimized: boolean;
+  isOverlayVisible: boolean;
 }

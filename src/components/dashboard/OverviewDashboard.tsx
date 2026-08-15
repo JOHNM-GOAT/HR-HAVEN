@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { MoodType, getBurnoutRiskConfig } from '../../types/wellness';
 import { PolarBearEmoji } from '../common/PolarBearEmoji';
@@ -24,60 +24,110 @@ import {
 export const OverviewDashboard: React.FC = () => {
   const {
     burnoutMetrics,
+    moodLogs,
     addMoodLog,
     setActiveExercise,
     setActiveTab,
     boundaryConfig,
     toggleFocusMode,
     accessibility,
-    badges
+    badges,
+    userProfile,
+    pomodoro,
+    togglePomodoro,
+    isDarkMode
   } = useWellness();
 
+  // 20-second cooldown between mood check-ins
+  const CHECKIN_COOLDOWN = 20;
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const isCoolingDown = cooldownSeconds > 0;
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownSeconds]);
+
+  const handleMoodCheckIn = useCallback(
+    (type: MoodType, energyLevel: number) => {
+      if (isCoolingDown) return;
+      addMoodLog(type, energyLevel);
+      setCooldownSeconds(CHECKIN_COOLDOWN);
+    },
+    [isCoolingDown, addMoodLog]
+  );
+
   const moodOptions: { type: MoodType; emoji: string; label: string; color: string }[] = [
-    { type: 'thriving', emoji: '🐻‍❄️', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
-    { type: 'good', emoji: '🐻‍❄️', label: 'Good', color: 'hover:border-blue-500 hover:bg-blue-50 text-slate-800' },
-    { type: 'okay', emoji: '🐻‍❄️', label: 'Okay', color: 'hover:border-amber-500 hover:bg-amber-50 text-slate-800' },
-    { type: 'stressed', emoji: '🐻‍❄️', label: 'Stressed', color: 'hover:border-orange-500 hover:bg-orange-50 text-slate-800' },
-    { type: 'exhausted', emoji: '🐻‍❄️', label: 'Exhausted', color: 'hover:border-rose-500 hover:bg-rose-50 text-slate-800' },
+    { type: 'thriving', emoji: '🤩', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
+    { type: 'good', emoji: '😊', label: 'Good', color: 'hover:border-blue-500 hover:bg-blue-50 text-slate-800' },
+    { type: 'okay', emoji: '🙂', label: 'Okay', color: 'hover:border-amber-500 hover:bg-amber-50 text-slate-800' },
+    { type: 'stressed', emoji: '😰', label: 'Stressed', color: 'hover:border-orange-500 hover:bg-orange-50 text-slate-800' },
+    { type: 'exhausted', emoji: '😫', label: 'Exhausted', color: 'hover:border-rose-500 hover:bg-rose-50 text-slate-800' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Welcome Card */}
-      <div className="enterprise-card p-6 sm:p-7 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* Top Welcome Header (Transparent, Borderless & Boxless) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 pb-2">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> AxionHR AI Shield Active
-            </span>
-            <span className="text-xs text-slate-500">Continuous Privacy-First Telemetry</span>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Hi, <span className="text-blue-600">Alex Mercer</span>
+          <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            Hi, <span className="text-blue-600 dark:text-blue-400">{userProfile.name}</span>
           </h2>
-          <p className="text-xs text-slate-600 mt-1 max-w-xl">
-            Here is your workplace well-being & burnout protection overview for today. All personal telemetry remains 100% anonymous.
-          </p>
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* AI Coach Insight Icon-only Button */}
+          <button
+            onClick={() => setActiveTab('mental')}
+            title="AI Coach Insight: Alex, you have 3 back-to-back meetings starting at 2:00 PM. Enable Boundary Guard to hold non-essential notifications."
+            className={`p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 flex items-center justify-center relative group ${
+              isDarkMode
+                ? 'bg-[#202229] border-[#2e323d] text-blue-400 hover:bg-[#282b35] hover:border-blue-500/50'
+                : 'bg-white border-slate-200 text-blue-600 hover:bg-blue-50 shadow-xs'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-blue-500 transition-transform group-hover:scale-110" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          </button>
+
           <button
             onClick={() => setActiveExercise('stretch')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer active:scale-95"
           >
             <Heart className="w-4 h-4 fill-white" />
             <span>Take 2-Min Break</span>
           </button>
           <button
-            onClick={toggleFocusMode}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${accessibility.focusModeActive
-                ? 'bg-emerald-600 text-white border-emerald-600'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+            onClick={() => {
+              togglePomodoro();
+              if (!accessibility.focusModeActive) {
+                toggleFocusMode();
+              }
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              pomodoro.isRunning
+                ? 'bg-emerald-600 text-white shadow-emerald-500/20 shadow-md'
+                : isDarkMode
+                  ? 'bg-[#202229] border border-[#2e323d] text-slate-200 hover:bg-[#282b35]'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
+            }`}
           >
-            <Zap className="w-4 h-4" />
-            <span>{accessibility.focusModeActive ? 'Focus Active' : 'Start Focus Session'}</span>
+            <Zap className={`w-4 h-4 ${pomodoro.isRunning ? 'animate-bounce' : ''}`} />
+            <span>
+              {pomodoro.isRunning
+                ? `Focus Active (${Math.floor(pomodoro.secondsRemaining / 60)}:${String(pomodoro.secondsRemaining % 60).padStart(2, '0')})`
+                : 'Start Focus Session'}
+            </span>
           </button>
         </div>
       </div>
@@ -131,16 +181,16 @@ export const OverviewDashboard: React.FC = () => {
               {/* 4-Tier Risk Scale Indicator */}
               <div className="grid grid-cols-4 gap-1 text-[9px] font-bold text-center mt-3 w-full">
                 <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'low' ? 'bg-emerald-600 text-white font-extrabold shadow-xs' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/60'}`}>
-                  Low<br/>0-25
+                  Low<br />0-25
                 </div>
                 <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'normal' ? 'bg-blue-600 text-white font-extrabold shadow-xs' : 'bg-blue-50 text-blue-800 border border-blue-200/60'}`}>
-                  Normal<br/>26-50
+                  Normal<br />26-50
                 </div>
                 <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'moderate' ? 'bg-amber-500 text-white font-extrabold shadow-xs' : 'bg-amber-50 text-amber-900 border border-amber-200/60'}`}>
-                  Moderate<br/>51-75
+                  Moderate<br />51-75
                 </div>
                 <div className={`py-1 rounded-md transition-all ${burnoutMetrics.riskLevel === 'high' ? 'bg-rose-600 text-white font-extrabold shadow-xs' : 'bg-rose-50 text-rose-800 border border-rose-200/60'}`}>
-                  High<br/>76-100
+                  High<br />76-100
                 </div>
               </div>
             </div>
@@ -163,62 +213,72 @@ export const OverviewDashboard: React.FC = () => {
         </div>
 
         {/* Daily Mood Check-In Widget */}
-        <div className="enterprise-card p-6 border border-slate-200 flex flex-col justify-between lg:col-span-2">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Smile className="w-5 h-5 text-blue-600" />
-                  Daily Mood Check-In
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Replaces traditional surveys with a single tap. 100% anonymous to HR.
+        <div className="enterprise-card p-6 sm:p-7 border border-slate-200 flex flex-col justify-between lg:col-span-2">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Smile className="w-5 h-5 text-blue-600" />
+              Daily Mood Check-In
+            </h3>
+            <span className="text-xs font-semibold text-slate-400">
+              {moodLogs.length > 0 ? `${moodLogs.length} logged today` : 'Quick Check'}
+            </span>
+          </div>
+
+          {/* Centered Mood Selection Area */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center my-auto py-5">
+            {/* Caption */}
+            <p className="text-xs sm:text-sm font-medium text-slate-500 mb-6">
+              How are you feeling right now? Select an emoji below to check in.
+            </p>
+
+            {/* Cooldown Timer */}
+            {isCoolingDown && (
+              <div className="flex items-center gap-3 mb-5 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                <div className="relative w-8 h-8 shrink-0">
+                  <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="#fde68a" strokeWidth="3" />
+                    <circle
+                      cx="18" cy="18" r="15" fill="none" stroke="#f59e0b" strokeWidth="3"
+                      strokeDasharray={`${(cooldownSeconds / CHECKIN_COOLDOWN) * 94.25} 94.25`}
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-linear"
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-amber-700">
+                    {cooldownSeconds}
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 font-semibold">
+                  Next check-in available in <span className="font-bold">{cooldownSeconds}s</span>
                 </p>
               </div>
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                🔒 Privacy Protected
-              </span>
-            </div>
+            )}
 
-            {/* Emoji Selector */}
-            <div className="grid grid-cols-5 gap-3 my-5">
+            {/* Emoji Selector - Centered & Comfortably Spaced with Pop & Movement Animation */}
+            <div className={`grid grid-cols-5 gap-3 sm:gap-4 w-full max-w-2xl ${isCoolingDown ? 'opacity-50 pointer-events-none' : ''}`}>
               {moodOptions.map(option => (
                 <button
                   key={option.type}
-                  onClick={() => addMoodLog(option.type, option.type === 'thriving' ? 5 : option.type === 'good' ? 4 : option.type === 'okay' ? 3 : option.type === 'stressed' ? 2 : 1)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 border border-slate-200 transition-all ${option.color} group`}
+                  onClick={() => handleMoodCheckIn(option.type, option.type === 'thriving' ? 5 : option.type === 'good' ? 4 : option.type === 'okay' ? 3 : option.type === 'stressed' ? 2 : 1)}
+                  disabled={isCoolingDown}
+                  className={`flex flex-col items-center justify-center py-5 px-3 rounded-2xl border transition-all duration-300 transform-gpu hover:-translate-y-2.5 hover:scale-105 active:scale-95 shadow-xs hover:shadow-lg cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-[#1a1c22] border-[#2e323d] hover:border-blue-500/80 hover:bg-[#222632] hover:shadow-blue-500/10'
+                      : 'bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-white hover:shadow-blue-500/15'
+                  } ${isCoolingDown ? 'cursor-not-allowed' : option.color} group`}
                 >
-                  <span className="mb-2 transform group-hover:scale-115 transition-transform flex items-center justify-center">
-                    <PolarBearEmoji mood={option.type} size={44} />
+                  <span className="mb-2.5 flex items-center justify-center pointer-events-none">
+                    <PolarBearEmoji mood={option.type} size={52} />
                   </span>
-                  <span className="text-xs font-semibold text-slate-700">
+                  <span className={`text-xs font-bold transition-colors group-hover:text-blue-500 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
                     {option.label}
                   </span>
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* AI Coach Tip Banner */}
-          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-blue-600 text-white shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                AI Coach Insight
-                <span className="text-[10px] text-blue-700 font-semibold">Personalized</span>
-              </h4>
-              <p className="text-xs text-slate-700 mt-0.5 leading-relaxed">
-                "Alex, you have 3 back-to-back meetings starting at 2:00 PM. Enable Boundary Guard to hold non-essential notifications."
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveTab('mental')}
-              className="text-xs text-blue-700 hover:text-blue-900 font-bold shrink-0"
-            >
-              Open Coach →
-            </button>
           </div>
         </div>
       </div>
