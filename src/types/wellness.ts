@@ -13,6 +13,12 @@ export interface UserAccount {
   lastActive: string;
 }
 
+export interface DeletedUserAccount extends UserAccount {
+  deletedAt: string;
+  deletedBy: string;
+  deletionReason?: string;
+}
+
 export type BurnoutRiskLevel = 'low' | 'normal' | 'moderate' | 'high';
 
 export const getBurnoutRiskLevel = (score: number): BurnoutRiskLevel => {
@@ -90,6 +96,7 @@ export interface MoodLog {
   energyLevel: number; // 1-5
   note?: string;
   isAnonymousToHr: boolean;
+  createdAt?: string;
 }
 
 export interface WellnessReminder {
@@ -112,6 +119,7 @@ export interface PeerBadge {
   message: string;
   virtualCoffeeSent: boolean;
   timestamp: string;
+  createdAt?: string;
 }
 
 export interface ChatMessage {
@@ -173,4 +181,15 @@ export interface PomodoroTimer {
   mode: 'focus' | 'break';
   isMinimized: boolean;
   isOverlayVisible: boolean;
+}
+
+export interface HrNotification {
+  id: string;
+  type: 'teammate_flag' | 'burnout_alert' | 'quiet_hours_overload';
+  targetTeammate: string;
+  reason?: string;
+  submittedByAnonymous: boolean;
+  status: 'pending' | 'in_progress' | 'resolved';
+  timestamp: string;
+  severity: 'low' | 'medium' | 'high';
 }

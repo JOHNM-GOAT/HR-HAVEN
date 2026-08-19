@@ -11,7 +11,8 @@ interface CrystalWaveTimerProps {
 export const CrystalWaveTimer: React.FC<CrystalWaveTimerProps> = ({
   size = 220,
 }) => {
-  const { pomodoro, isDarkMode, togglePomodoro } = useWellness();
+  const { pomodoro, isDarkMode, togglePomodoro, accessibility } = useWellness();
+  const isReduced = accessibility.reducedMotion;
   const minutes = Math.floor(pomodoro.secondsRemaining / 60);
   const seconds = pomodoro.secondsRemaining % 60;
   const timeFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -27,21 +28,25 @@ export const CrystalWaveTimer: React.FC<CrystalWaveTimerProps> = ({
       role="button"
       tabIndex={0}
       title={isRunning ? 'Click to Pause Timer' : 'Click to Start Timer'}
-      className="relative flex items-center justify-center cursor-pointer select-none group transition-transform duration-300 hover:scale-105 active:scale-95"
+      className={`relative flex items-center justify-center cursor-pointer select-none group transition-transform duration-300 ${
+        isReduced ? '' : 'hover:scale-105 active:scale-95'
+      }`}
       style={{ width: size, height: size }}
     >
-      {/* Outer Soft Ambient Luminous Halo */}
-      <div
-        className={`absolute inset-0 rounded-full transition-all duration-700 pointer-events-none ${
-          isRunning
-            ? isBreak
-              ? 'bg-emerald-400/25 blur-2xl scale-110 animate-pulse'
-              : 'bg-sky-400/30 blur-2xl scale-110 animate-pulse'
-            : isLight
-              ? 'bg-blue-200/30 blur-xl scale-100'
-              : 'bg-blue-900/20 blur-xl scale-100'
-        }`}
-      />
+      {/* Outer Soft Ambient Luminous Halo (Hidden in Clutter Reduction) */}
+      {!isReduced && (
+        <div
+          className={`absolute inset-0 rounded-full transition-all duration-700 pointer-events-none ${
+            isRunning
+              ? isBreak
+                ? 'bg-emerald-400/25 blur-2xl scale-110 animate-pulse'
+                : 'bg-sky-400/30 blur-2xl scale-110 animate-pulse'
+              : isLight
+                ? 'bg-blue-200/30 blur-xl scale-100'
+                : 'bg-blue-900/20 blur-xl scale-100'
+          }`}
+        />
+      )}
 
       {/* SVG Crystal Glass Torus Ring with Undulating Sine Wave Ribbon & Sparkles */}
       <svg
@@ -114,9 +119,9 @@ export const CrystalWaveTimer: React.FC<CrystalWaveTimerProps> = ({
           opacity="0.55"
         />
 
-        {/* Animated Undulating Luminous Sine Wave Energy Ribbon (Rotating smoothly) */}
+        {/* Animated Undulating Luminous Sine Wave Energy Ribbon (Rotating smoothly when not in reduced motion) */}
         <g
-          className={isRunning ? 'animate-spin' : ''}
+          className={isRunning && !isReduced ? 'animate-spin' : ''}
           style={{ transformOrigin: '120px 120px', animationDuration: '16s' }}
         >
           {/* Main Glowing Sine-Wave Silk Ribbon (8 smooth harmonic wave lobes around the ring) */}
@@ -273,8 +278,8 @@ export const CrystalWaveTimer: React.FC<CrystalWaveTimerProps> = ({
         </span>
       </div>
 
-      {/* Floating Dynamic Star Particles (Twinkling outside) */}
-      {isRunning && (
+      {/* Floating Dynamic Star Particles (Twinkling outside - hidden when clutter is reduced) */}
+      {isRunning && !isReduced && (
         <>
           <span
             className="absolute top-6 right-10 w-2 h-2 rounded-full bg-white shadow-md animate-ping pointer-events-none"

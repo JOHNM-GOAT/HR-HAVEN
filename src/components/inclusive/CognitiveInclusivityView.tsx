@@ -71,69 +71,118 @@ export const CognitiveInclusivityView: React.FC = () => {
             {/* Dyslexia Friendly Font Toggle */}
             <div
               onClick={toggleDyslexiaFont}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.dyslexiaFont
-                ? 'bg-blue-50 border-blue-400 text-blue-900'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                accessibility.dyslexiaFont
+                  ? isDarkMode
+                    ? 'bg-blue-950/60 border-blue-500 text-blue-200'
+                    : 'bg-blue-50 border-blue-400 text-blue-900'
+                  : isDarkMode
+                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-900">Dyslexia-Friendly Font</span>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.dyslexiaFont ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Dyslexia-Friendly Font
+                </span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                  accessibility.dyslexiaFont ? 'bg-blue-600 border-blue-600' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
+                }`}>
                   {accessibility.dyslexiaFont && <span className="text-[10px] text-white font-bold">✓</span>}
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Increases letter spacing and uses high-legibility character shapes.</p>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Increases letter spacing and uses high-legibility character shapes.
+              </p>
             </div>
 
             {/* High Contrast Mode Toggle */}
             <div
               onClick={toggleHighContrast}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.highContrast
-                ? 'bg-blue-50 border-blue-400 text-blue-900'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                accessibility.highContrast
+                  ? isDarkMode
+                    ? 'bg-blue-950/60 border-blue-500 text-blue-200'
+                    : 'bg-blue-50 border-blue-400 text-blue-900'
+                  : isDarkMode
+                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-900">High Contrast UI</span>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.highContrast ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  High Contrast UI
+                </span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                  accessibility.highContrast ? 'bg-blue-600 border-blue-600' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
+                }`}>
                   {accessibility.highContrast && <span className="text-[10px] text-white font-bold">✓</span>}
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Enhances visual borders and background contrast for readability.</p>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Enhances visual borders and background contrast for readability.
+              </p>
             </div>
 
             {/* Notification Batching Toggle */}
             <div
               onClick={toggleBatchNotifications}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.batchNotifications
-                ? 'bg-blue-50 border-blue-400 text-blue-900'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                accessibility.batchNotifications
+                  ? isDarkMode
+                    ? 'bg-blue-950/60 border-blue-500 text-blue-200'
+                    : 'bg-blue-50 border-blue-400 text-blue-900'
+                  : isDarkMode
+                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-900">Notification Batching</span>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.batchNotifications ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Notification Batching
+                </span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                  accessibility.batchNotifications ? 'bg-blue-600 border-blue-600' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
+                }`}>
                   {accessibility.batchNotifications && <span className="text-[10px] text-white font-bold">✓</span>}
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Batches non-urgent emails & Slack alerts into hourly focus digests.</p>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Batches non-urgent emails & Slack alerts into hourly focus digests.
+              </p>
             </div>
 
             {/* Clutter Reduction Toggle */}
             <div
               onClick={toggleClutterReduction}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${accessibility.reducedMotion
-                ? 'bg-blue-50 border-blue-400 text-blue-900'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                accessibility.reducedMotion
+                  ? isDarkMode
+                    ? 'bg-blue-950/60 border-blue-500 text-blue-200 shadow-xs'
+                    : 'bg-blue-50 border-blue-400 text-blue-900 shadow-xs'
+                  : isDarkMode
+                    ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-900">Clutter Reduction</span>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center ${accessibility.reducedMotion ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                <span className={`text-sm font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Clutter Reduction
+                  {accessibility.reducedMotion && (
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-blue-600 text-white">
+                      ACTIVE
+                    </span>
+                  )}
+                </span>
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                  accessibility.reducedMotion ? 'bg-blue-600 border-blue-600' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
+                }`}>
                   {accessibility.reducedMotion && <span className="text-[10px] text-white font-bold">✓</span>}
                 </div>
               </div>
-              <p className="text-xs text-slate-500">Removes non-essential decorative animations during focus sessions.</p>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Removes non-essential animations and suppresses visual noise for calm focus.
+              </p>
             </div>
           </div>
 

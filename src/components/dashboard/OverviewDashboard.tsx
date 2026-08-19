@@ -90,11 +90,10 @@ export const OverviewDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('mental')}
             title="AI Coach Insight: Alex, you have 3 back-to-back meetings starting at 2:00 PM. Enable Boundary Guard to hold non-essential notifications."
-            className={`p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 flex items-center justify-center relative group ${
-              isDarkMode
+            className={`p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 flex items-center justify-center relative group ${isDarkMode
                 ? 'bg-[#202229] border-[#2e323d] text-blue-400 hover:bg-[#282b35] hover:border-blue-500/50'
                 : 'bg-white border-slate-200 text-blue-600 hover:bg-blue-50 shadow-xs'
-            }`}
+              }`}
           >
             <Sparkles className="w-4 h-4 text-blue-500 transition-transform group-hover:scale-110" />
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
@@ -114,13 +113,12 @@ export const OverviewDashboard: React.FC = () => {
                 toggleFocusMode();
               }
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
-              pomodoro.isRunning
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${pomodoro.isRunning
                 ? 'bg-emerald-600 text-white shadow-emerald-500/20 shadow-md'
                 : isDarkMode
                   ? 'bg-[#202229] border border-[#2e323d] text-slate-200 hover:bg-[#282b35]'
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
-            }`}
+              }`}
           >
             <Zap className={`w-4 h-4 ${pomodoro.isRunning ? 'animate-bounce' : ''}`} />
             <span>
@@ -228,7 +226,7 @@ export const OverviewDashboard: React.FC = () => {
           {/* Centered Mood Selection Area */}
           <div className="flex-1 flex flex-col items-center justify-center text-center my-auto py-5">
             {/* Caption */}
-            <p className="text-xs sm:text-sm font-medium text-slate-500 mb-6">
+            <p className="text-sm sm:text-[15px] font-normal text-[#64748b] dark:text-slate-400 font-sans tracking-normal leading-relaxed mb-6">
               How are you feeling right now? Select an emoji below to check in.
             </p>
 
@@ -262,18 +260,16 @@ export const OverviewDashboard: React.FC = () => {
                   key={option.type}
                   onClick={() => handleMoodCheckIn(option.type, option.type === 'thriving' ? 5 : option.type === 'good' ? 4 : option.type === 'okay' ? 3 : option.type === 'stressed' ? 2 : 1)}
                   disabled={isCoolingDown}
-                  className={`flex flex-col items-center justify-center py-5 px-3 rounded-2xl border transition-all duration-300 transform-gpu hover:-translate-y-2.5 hover:scale-105 active:scale-95 shadow-xs hover:shadow-lg cursor-pointer ${
-                    isDarkMode
+                  className={`flex flex-col items-center justify-center py-5 px-3 rounded-2xl border transition-all duration-300 transform-gpu hover:-translate-y-2.5 hover:scale-105 active:scale-95 shadow-xs hover:shadow-lg cursor-pointer ${isDarkMode
                       ? 'bg-[#1a1c22] border-[#2e323d] hover:border-blue-500/80 hover:bg-[#222632] hover:shadow-blue-500/10'
                       : 'bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-white hover:shadow-blue-500/15'
-                  } ${isCoolingDown ? 'cursor-not-allowed' : option.color} group`}
+                    } ${isCoolingDown ? 'cursor-not-allowed' : option.color} group`}
                 >
                   <span className="mb-2.5 flex items-center justify-center pointer-events-none">
                     <PolarBearEmoji mood={option.type} size={52} />
                   </span>
-                  <span className={`text-xs font-bold transition-colors group-hover:text-blue-500 ${
-                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                  }`}>
+                  <span className={`text-xs font-bold transition-colors group-hover:text-blue-500 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                    }`}>
                     {option.label}
                   </span>
                 </button>

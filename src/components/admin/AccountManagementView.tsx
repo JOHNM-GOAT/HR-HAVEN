@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { UserAccount, UserRole } from '../../types/wellness';
+import { UserAccount, UserRole, DeletedUserAccount } from '../../types/wellness';
 import { 
   Users, 
   UserPlus, 
@@ -16,12 +16,19 @@ import {
   Trash2, 
   Check, 
   X, 
-  Sparkles,
-  RefreshCw,
-  ChevronDown,
-  Eye,
-  EyeOff,
-  Key
+  Sparkles, 
+  RefreshCw, 
+  ChevronDown, 
+  Eye, 
+  EyeOff, 
+  Key,
+  RotateCcw,
+  Archive,
+  History,
+  AlertTriangle,
+  Lock,
+  Clock,
+  Shield
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -33,14 +40,29 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150'
 ];
 
+export const DEFAULT_DEPARTMENTS = [
+  'Engineering',
+  'Product Design & UX',
+  'Human Resources',
+  'Customer Success',
+  'Marketing & Growth',
+  'Sales Operations',
+  'Finance & Legal',
+  'Operations & IT'
+];
+
 export const AccountManagementView: React.FC = () => {
   const { 
     accounts, 
+    deletedAccounts,
     createAccount, 
     updateAccountRole, 
     toggleAccountStatus, 
     updateAccount, 
     deleteAccount,
+    recoverAccount,
+    permanentlyPurgeAccount,
+    restoreAllDeletedAccounts,
     setToastNotification
   } = useWellness();
 
@@ -50,10 +72,14 @@ export const AccountManagementView: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Modals state
+  // Modals & Drawers state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<UserAccount | null>(null);
+  const [deletionReason, setDeletionReason] = useState<string>('Offboarding / Department Restructuring');
+  const [showRecoveryDrawer, setShowRecoveryDrawer] = useState(false);
+  const [recoverySearch, setRecoverySearch] = useState('');
+  const [purgeCandidate, setPurgeCandidate] = useState<DeletedUserAccount | null>(null);
 
   // New Account Form state
   const [newName, setNewName] = useState('');
@@ -61,6 +87,7 @@ export const AccountManagementView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('password123');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [newDepartment, setNewDepartment] = useState('Engineering');
+  const [customNewDepartment, setCustomNewDepartment] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('employee');
   const [newStatus, setNewStatus] = useState<'active' | 'disabled'>('active');
   const [newAvatar, setNewAvatar] = useState(PRESET_AVATARS[0]);
@@ -71,11 +98,13 @@ export const AccountManagementView: React.FC = () => {
   const [editPassword, setEditPassword] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editDepartment, setEditDepartment] = useState('');
+  const [isCustomEditDept, setIsCustomEditDept] = useState(false);
   const [editRole, setEditRole] = useState<UserRole>('employee');
   const [editStatus, setEditStatus] = useState<'active' | 'disabled'>('active');
 
   // Derive unique departments
-  const departments = Array.from(new Set(accounts.map(a => a.department)));
+  const allDepartments = Array.from(new Set([...DEFAULT_DEPARTMENTS, ...accounts.map(a => a.department)]));
+  const departments = allDepartments;
 
   // Filter accounts
   const filteredAccounts = accounts.filter(account => {
@@ -86,6 +115,13 @@ export const AccountManagementView: React.FC = () => {
     const matchesStatus = statusFilter === 'all' || account.status === statusFilter;
     return matchesSearch && matchesDept && matchesRole && matchesStatus;
   });
+
+  // Filter deleted accounts for recovery drawer
+  const filteredDeletedAccounts = deletedAccounts.filter(account => 
+    account.name.toLowerCase().includes(recoverySearch.toLowerCase()) ||
+    account.email.toLowerCase().includes(recoverySearch.toLowerCase()) ||
+    account.department.toLowerCase().includes(recoverySearch.toLowerCase())
+  );
 
   // Calculate statistics
   const totalCount = accounts.length;
@@ -107,11 +143,15 @@ export const AccountManagementView: React.FC = () => {
       return;
     }
 
+    const finalDept = newDepartment === 'custom' && customNewDepartment.trim()
+      ? customNewDepartment.trim()
+      : newDepartment;
+
     createAccount({
       name: newName.trim(),
       email: newEmail.trim(),
       password: newPassword.trim(),
-      department: newDepartment,
+      department: finalDept,
       role: newRole,
       status: newStatus,
       avatarUrl: newAvatar
@@ -123,6 +163,7 @@ export const AccountManagementView: React.FC = () => {
     setNewPassword('password123');
     setShowNewPassword(false);
     setNewDepartment('Engineering');
+    setCustomNewDepartment('');
     setNewRole('employee');
     setNewStatus('active');
     setIsCreateModalOpen(false);
@@ -134,6 +175,7 @@ export const AccountManagementView: React.FC = () => {
     setEditEmail(account.email);
     setEditPassword(account.password || 'password123');
     setEditDepartment(account.department);
+    setIsCustomEditDept(!allDepartments.includes(account.department));
     setEditRole(account.role);
     setEditStatus(account.status);
   };
@@ -146,11 +188,13 @@ export const AccountManagementView: React.FC = () => {
       return;
     }
 
+    const finalDept = editDepartment.trim() || editingAccount.department || 'Engineering';
+
     updateAccount(editingAccount.id, {
       name: editName.trim(),
       email: editEmail.trim(),
       password: editPassword.trim() || editingAccount.password || 'password123',
-      department: editDepartment,
+      department: finalDept,
       role: editRole,
       status: editStatus
     });
@@ -160,8 +204,16 @@ export const AccountManagementView: React.FC = () => {
 
   const confirmDelete = () => {
     if (deletingAccount) {
-      deleteAccount(deletingAccount.id);
+      deleteAccount(deletingAccount.id, deletionReason);
       setDeletingAccount(null);
+      setDeletionReason('Offboarding / Department Restructuring');
+    }
+  };
+
+  const confirmHardPurge = () => {
+    if (purgeCandidate) {
+      permanentlyPurgeAccount(purgeCandidate.id);
+      setPurgeCandidate(null);
     }
   };
 
@@ -177,7 +229,7 @@ export const AccountManagementView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 font-sans">
       {/* Top Banner / Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -195,8 +247,35 @@ export const AccountManagementView: React.FC = () => {
           </p>
         </div>
 
-        {/* Primary Action Button */}
-        <div className="flex items-center gap-3">
+        {/* Primary Action Buttons & Recovery Vault Nav Icon */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Recovery Vault Navigation Icon Button */}
+          <button
+            onClick={() => setShowRecoveryDrawer(true)}
+            className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95 group ${
+              deletedAccounts.length > 0
+                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+            }`}
+            title="Security Recovery Vault: View and restore deleted accounts"
+          >
+            <div className="relative">
+              <RotateCcw className={`w-4 h-4 transition-transform group-hover:-rotate-45 ${
+                deletedAccounts.length > 0 ? 'text-amber-600 animate-pulse' : 'text-slate-500'
+              }`} />
+              {deletedAccounts.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              )}
+            </div>
+            <span>Deleted Users Vault</span>
+            {deletedAccounts.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-600 text-white shadow-2xs">
+                {deletedAccounts.length}
+              </span>
+            )}
+          </button>
+
+          {/* Create New Account Button */}
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-lg shadow-blue-600/25 flex items-center gap-2 transition-all cursor-pointer active:scale-98"
@@ -211,7 +290,7 @@ export const AccountManagementView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="enterprise-card p-4 border border-slate-200/80 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-semibold">Total Accounts</span>
+            <span className="text-xs text-slate-500 font-semibold">Total Active Users</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Users className="w-4 h-4" />
             </div>
@@ -238,105 +317,107 @@ export const AccountManagementView: React.FC = () => {
               {Math.round((activeCount / (totalCount || 1)) * 100)}%
             </span>
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">Enabled access to platform</p>
+          <p className="text-[10px] text-slate-400 mt-2">Active login access granted</p>
         </div>
 
         <div className="enterprise-card p-4 border border-slate-200/80 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-500 font-semibold">Disabled Accounts</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
               <UserX className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-rose-600">{disabledCount}</span>
-            <span className="text-[11px] text-slate-500 font-medium">restricted</span>
+            <span className="text-2xl font-black text-slate-700">{disabledCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">suspended</span>
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">Access revoked / offboarded</p>
+          <p className="text-[10px] text-slate-400 mt-2">Temporary access revocation</p>
         </div>
 
-        <div className="enterprise-card p-4 border border-slate-200/80 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xs">
+        {/* Recovery Vault Stat Card */}
+        <div 
+          onClick={() => setShowRecoveryDrawer(true)}
+          className="enterprise-card p-4 border border-amber-200 bg-amber-50/50 hover:bg-amber-50 backdrop-blur-sm rounded-2xl shadow-xs cursor-pointer transition-all group"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-semibold">Privileged Roles</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-              <ShieldAlert className="w-4 h-4" />
+            <span className="text-xs text-amber-800 font-bold flex items-center gap-1">
+              <span>Security Recovery Vault</span>
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 group-hover:rotate-180 transition-transform duration-500">
+              <RotateCcw className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-purple-700">{adminCount + hrCount}</span>
-            <span className="text-[11px] text-purple-700 font-bold">Admins & HR</span>
+            <span className="text-2xl font-black text-amber-800">{deletedAccounts.length}</span>
+            <span className="text-[11px] text-amber-700 font-bold">recoverable</span>
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">Elevated security access</p>
+          <p className="text-[10px] text-amber-700 mt-2 flex items-center gap-1 font-semibold">
+            <span>Click to view & restore deleted users ➔</span>
+          </p>
         </div>
       </div>
 
-      {/* Control Bar: Search & Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Search & Filters Toolbar */}
+      <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Search Input */}
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by name or email address..."
-            className="w-full bg-slate-50 border border-slate-200/90 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
+            placeholder="Search by full name, email, or employee ID..."
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
           />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
 
-        {/* Filters */}
+        {/* Filter Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Department Filter */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <div className="relative">
             <select
               value={departmentFilter}
               onChange={e => setDepartmentFilter(e.target.value)}
-              className="bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer text-xs"
+              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-600 cursor-pointer"
             >
               <option value="all">All Departments</option>
               {departments.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>
+            <ChevronDown className="w-3 h-3 absolute right-2.5 top-3 pointer-events-none text-slate-400" />
           </div>
 
           {/* Role Filter */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+          <div className="relative">
             <select
               value={roleFilter}
               onChange={e => setRoleFilter(e.target.value)}
-              className="bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer text-xs"
+              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-600 cursor-pointer"
             >
               <option value="all">All Roles</option>
-              <option value="admin">System Admin</option>
-              <option value="hr_manager">HR Manager</option>
-              <option value="employee">Employee</option>
+              <option value="admin">System Admins</option>
+              <option value="hr_manager">HR Managers</option>
+              <option value="employee">Employees</option>
             </select>
+            <ChevronDown className="w-3 h-3 absolute right-2.5 top-3 pointer-events-none text-slate-400" />
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+          <div className="relative">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer text-xs"
+              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-600 cursor-pointer"
             >
               <option value="all">All Statuses</option>
               <option value="active">Active Only</option>
               <option value="disabled">Disabled Only</option>
             </select>
+            <ChevronDown className="w-3 h-3 absolute right-2.5 top-3 pointer-events-none text-slate-400" />
           </div>
 
-          {/* Reset Filters button if any active */}
+          {/* Clear Filters Button */}
           {(searchQuery || departmentFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all') && (
             <button
               onClick={() => {
@@ -363,7 +444,16 @@ export const AccountManagementView: React.FC = () => {
               {filteredAccounts.length}
             </span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">Click role dropdown or status toggle for instant modifications</span>
+
+          {deletedAccounts.length > 0 && (
+            <button
+              onClick={() => setShowRecoveryDrawer(true)}
+              className="text-xs text-amber-700 hover:text-amber-800 font-bold flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{deletedAccounts.length} Deleted Account(s) in Vault ➔</span>
+            </button>
+          )}
         </div>
 
         {filteredAccounts.length === 0 ? (
@@ -419,11 +509,21 @@ export const AccountManagementView: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Department */}
+                      {/* Department (Quick Interactive Switcher) */}
                       <td className="p-3.5">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px]">
-                          {account.department}
-                        </span>
+                        <div className="relative inline-block group">
+                          <select
+                            value={account.department}
+                            onChange={e => updateAccount(account.id, { department: e.target.value })}
+                            className="appearance-none cursor-pointer text-[11px] font-bold px-3 py-1 pr-6 rounded-lg bg-slate-100 dark:bg-[#20222a] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            title="Click to edit or switch department"
+                          >
+                            {allDepartments.map(dept => (
+                              <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3 h-3 absolute right-1.5 top-2 pointer-events-none opacity-50 text-slate-500" />
+                        </div>
                       </td>
 
                       {/* Interactive Role Switcher Dropdown */}
@@ -489,7 +589,7 @@ export const AccountManagementView: React.FC = () => {
                           <button
                             onClick={() => setDeletingAccount(account)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Delete Account"
+                            title="Delete Account (Move to Recovery Vault)"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -612,16 +712,23 @@ export const AccountManagementView: React.FC = () => {
                   <select
                     value={newDepartment}
                     onChange={e => setNewDepartment(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer"
                   >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Human Resources">Human Resources</option>
-                    <option value="Product Design">Product Design</option>
-                    <option value="Customer Success">Customer Success</option>
-                    <option value="Marketing & Growth">Marketing & Growth</option>
-                    <option value="Sales Operations">Sales Operations</option>
-                    <option value="Executive IT">Executive IT</option>
+                    {allDepartments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                    <option value="custom">+ Custom Department...</option>
                   </select>
+                  {newDepartment === 'custom' && (
+                    <input
+                      type="text"
+                      value={customNewDepartment}
+                      onChange={e => setCustomNewDepartment(e.target.value)}
+                      placeholder="Enter department name..."
+                      className="w-full mt-2 bg-slate-50 border border-blue-400 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      required
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -638,21 +745,21 @@ export const AccountManagementView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Initial Status */}
+              {/* Status */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Initial Account Status</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Initial Status</label>
                 <div className="flex gap-3">
                   <label className={`flex-1 p-2.5 rounded-xl border cursor-pointer text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                     newStatus === 'active' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600'
                   }`}>
                     <input 
                       type="radio" 
-                      name="status" 
+                      name="newStatus" 
                       checked={newStatus === 'active'} 
                       onChange={() => setNewStatus('active')}
                       className="hidden" 
                     />
-                    <UserCheck className="w-4 h-4" /> Active (Enabled)
+                    Active
                   </label>
 
                   <label className={`flex-1 p-2.5 rounded-xl border cursor-pointer text-xs font-bold flex items-center justify-center gap-2 transition-all ${
@@ -660,17 +767,17 @@ export const AccountManagementView: React.FC = () => {
                   }`}>
                     <input 
                       type="radio" 
-                      name="status" 
+                      name="newStatus" 
                       checked={newStatus === 'disabled'} 
                       onChange={() => setNewStatus('disabled')}
                       className="hidden" 
                     />
-                    <UserX className="w-4 h-4" /> Disabled
+                    Disabled
                   </label>
                 </div>
               </div>
 
-              {/* Buttons */}
+              {/* Actions */}
               <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -683,7 +790,7 @@ export const AccountManagementView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md shadow-blue-600/25 transition-all cursor-pointer"
                 >
-                  Create Account
+                  Create User
                 </button>
               </div>
             </form>
@@ -769,13 +876,33 @@ export const AccountManagementView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
-                  <input
-                    type="text"
-                    value={editDepartment}
-                    onChange={e => setEditDepartment(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
-                    required
-                  />
+                  <select
+                    value={allDepartments.includes(editDepartment) && !isCustomEditDept ? editDepartment : 'custom'}
+                    onChange={e => {
+                      if (e.target.value === 'custom') {
+                        setIsCustomEditDept(true);
+                      } else {
+                        setIsCustomEditDept(false);
+                        setEditDepartment(e.target.value);
+                      }
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer"
+                  >
+                    {allDepartments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                    <option value="custom">+ Custom Department...</option>
+                  </select>
+                  {(isCustomEditDept || !allDepartments.includes(editDepartment)) && (
+                    <input
+                      type="text"
+                      value={editDepartment}
+                      onChange={e => setEditDepartment(e.target.value)}
+                      placeholder="Type custom department..."
+                      className="w-full mt-2 bg-slate-50 border border-blue-400 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      required
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -843,35 +970,249 @@ export const AccountManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* SOFT DELETE CONFIRMATION MODAL (Moves to Recovery Vault) */}
       {deletingAccount && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-6 h-6" />
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+              <Archive className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-extrabold text-slate-900">Delete Account?</h3>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-              Are you sure you want to permanently delete the account for <strong className="text-slate-900">{deletingAccount.name}</strong> ({deletingAccount.email})? This action cannot be undone.
+            <h3 className="text-lg font-extrabold text-slate-900 text-center">Move to Security Recovery Vault?</h3>
+            <p className="text-xs text-slate-500 mt-2 text-center leading-relaxed">
+              You are deactivating the account for <strong className="text-slate-900">{deletingAccount.name}</strong> ({deletingAccount.email}).
             </p>
+
+            <div className="mt-3 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Admin Security Feature:</strong> This account will be safely archived in the <strong>Recovery Vault</strong>. You can restore it anytime with 1-click.
+              </span>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Reason for Deprovisioning (Optional)</label>
+              <input
+                type="text"
+                value={deletionReason}
+                onChange={e => setDeletionReason(e.target.value)}
+                placeholder="e.g. Offboarding, Department restructuring..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+            </div>
 
             <div className="mt-6 flex items-center justify-center gap-3">
               <button
                 onClick={() => setDeletingAccount(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md shadow-rose-600/25 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md shadow-amber-600/25 transition-all cursor-pointer flex items-center gap-1.5"
               >
-                Delete Permanently
+                <Archive className="w-3.5 h-3.5" />
+                <span>Move to Recovery Vault</span>
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* SLIDE-OVER DRAWER: Security Recovery Vault & Deleted Accounts */}
+      {showRecoveryDrawer && (
+        <>
+          {/* Backdrop Overlay */}
+          <div 
+            onClick={() => setShowRecoveryDrawer(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 transition-opacity animate-fade-in"
+          />
+
+          {/* Drawer Container (Slides In From Right) */}
+          <div 
+            className="fixed inset-y-0 right-0 z-50 w-full sm:w-[540px] bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out border-l border-slate-200"
+          >
+            {/* Drawer Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold tracking-tight">
+                      Security Recovery Vault
+                    </h3>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-300 border border-amber-500/40">
+                      {deletedAccounts.length} Recoverable
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Deprovisioned & deleted accounts archive
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowRecoveryDrawer(false)}
+                className="p-2 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
+                title="Close Vault"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Security Banner & Quick Actions */}
+            <div className="p-4 bg-amber-50/80 border-b border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-900 leading-tight">
+                  Deleted accounts are held securely. You can restore access instantly with all historical credentials preserved.
+                </p>
+              </div>
+
+              {deletedAccounts.length > 1 && (
+                <button
+                  onClick={restoreAllDeletedAccounts}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0 shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restore All ({deletedAccounts.length})</span>
+                </button>
+              )}
+            </div>
+
+            {/* Search Bar inside Drawer */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={recoverySearch}
+                  onChange={e => setRecoverySearch(e.target.value)}
+                  placeholder="Filter deleted users by name, email, or department..."
+                  className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-600 placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {/* Scrollable Deleted Accounts List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-slate-50/30">
+              {filteredDeletedAccounts.length === 0 ? (
+                <div className="text-center py-20 border border-dashed border-slate-200 rounded-2xl bg-white p-6">
+                  <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
+                  <p className="text-sm font-bold text-slate-700">Recovery Vault Clean</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {deletedAccounts.length === 0 
+                      ? 'No deleted accounts in vault. All users are currently active or provisioned.'
+                      : 'No deleted accounts match your search query.'}
+                  </p>
+                </div>
+              ) : (
+                filteredDeletedAccounts.map(account => (
+                  <div 
+                    key={account.id}
+                    className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs hover:border-amber-300 transition-all space-y-3"
+                  >
+                    {/* User Info Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={account.avatarUrl || PRESET_AVATARS[0]}
+                          alt={account.name}
+                          className="w-10 h-10 rounded-full object-cover grayscale border-2 border-slate-300"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-slate-900">{account.name}</span>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                              Deleted Record
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500">{account.email}</p>
+                        </div>
+                      </div>
+
+                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border uppercase ${getRoleBadgeClass(account.role)}`}>
+                        {account.role.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    {/* Metadata & Audit Trail Box */}
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between text-slate-600">
+                        <span className="font-bold flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" /> Deleted: {account.deletedAt}
+                        </span>
+                        <span className="text-slate-500 font-medium">Dept: {account.department}</span>
+                      </div>
+                      <p className="text-slate-500">
+                        <strong className="text-slate-700">Archived By:</strong> {account.deletedBy}
+                      </p>
+                      {account.deletionReason && (
+                        <p className="text-slate-600 italic">
+                          &ldquo;{account.deletionReason}&rdquo;
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action Controls */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <button
+                        onClick={() => setPurgeCandidate(account)}
+                        className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                        title="Permanently erase from vault"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hard Purge</span>
+                      </button>
+
+                      <button
+                        onClick={() => recoverAccount(account.id)}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restore Account Access</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* HARD PURGE CONFIRMATION MODAL */}
+      {purgeCandidate && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">Permanently Purge Record?</h3>
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+              This will permanently expunge <strong className="text-slate-900">{purgeCandidate.name}</strong> ({purgeCandidate.email}) from the Security Recovery Vault. Once purged, this record cannot be recovered.
+            </p>
+
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setPurgeCandidate(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmHardPurge}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md shadow-rose-600/25 transition-all cursor-pointer"
+              >
+                Confirm Hard Purge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

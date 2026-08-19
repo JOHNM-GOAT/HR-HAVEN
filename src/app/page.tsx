@@ -20,16 +20,36 @@ import { HrExecutiveView } from '../components/hr/HrExecutiveView';
 import { AccountManagementView } from '../components/admin/AccountManagementView';
 import { SettingsView } from '../components/settings/SettingsView';
 import { PomodoroOverlay } from '../components/focus/PomodoroOverlay';
+import { WellnessReminderToast } from '../components/health/WellnessReminderToast';
 
 export default function Home() {
-  const { isAuthenticated, activeTab, accessibility, isSidebarOpen, toggleSidebar, isDarkMode } = useWellness();
+  const { isAuthenticated, isAuthLoading, activeTab, accessibility, isSidebarOpen, toggleSidebar, isDarkMode } = useWellness();
+
+  if (isAuthLoading) {
+    return (
+      <div className={`min-h-screen w-full flex items-center justify-center transition-colors ${
+        isDarkMode ? 'bg-[#14151a]' : 'bg-slate-100'
+      }`}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-white shadow-xl border border-slate-200/80 flex items-center justify-center animate-pulse">
+            <AxionLogo className="w-8 h-8" />
+          </div>
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
       <div
-        className={`min-h-screen bg-slate-100 transition-all ${accessibility.dyslexiaFont ? 'dyslexia-font' : ''
-          } ${accessibility.highContrast ? 'high-contrast' : ''
-          }`}
+        className={`min-h-screen bg-slate-100 transition-all ${
+          accessibility.dyslexiaFont ? 'dyslexia-font' : ''
+        } ${
+          accessibility.highContrast ? 'high-contrast' : ''
+        } ${
+          accessibility.reducedMotion ? 'clutter-reduced' : ''
+        }`}
       >
         <LoginPage />
         <Toast />
@@ -70,6 +90,8 @@ export default function Home() {
         accessibility.dyslexiaFont ? 'dyslexia-font' : ''
       } ${
         accessibility.highContrast ? 'high-contrast' : ''
+      } ${
+        accessibility.reducedMotion ? 'clutter-reduced' : ''
       }`}
     >
       <Sidebar />
@@ -97,6 +119,7 @@ export default function Home() {
       </main>
 
       <Toast />
+      <WellnessReminderToast />
       <ExerciseModal />
       <PomodoroOverlay />
     </div>

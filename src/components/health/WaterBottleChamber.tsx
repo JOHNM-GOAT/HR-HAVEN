@@ -5,17 +5,18 @@ import { useWellness } from '../../context/WellnessContext';
 import { Plus, Minus, RotateCcw, Sparkles, Check } from 'lucide-react';
 
 export const WaterBottleChamber: React.FC = () => {
-  const { waterCups, logWaterCup, removeWaterCup, resetWaterCups, isDarkMode } = useWellness();
+  const { waterCups, logWaterCup, removeWaterCup, resetWaterCups, isDarkMode, accessibility } = useWellness();
   const [isSplashing, setIsSplashing] = useState(false);
+  const isReduced = accessibility.reducedMotion;
 
   const targetCups = 10;
   const fillPercent = Math.min(100, Math.max(0, (waterCups / targetCups) * 100));
   const isGoalReached = waterCups >= targetCups;
 
   const handleClickChamber = () => {
-    setIsSplashing(true);
+    if (!isReduced) setIsSplashing(true);
     logWaterCup();
-    setTimeout(() => setIsSplashing(false), 600);
+    if (!isReduced) setTimeout(() => setIsSplashing(false), 600);
   };
 
   return (
@@ -93,8 +94,8 @@ export const WaterBottleChamber: React.FC = () => {
                   boxShadow: fillPercent > 0 ? '0 0 25px rgba(56, 189, 248, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.4)' : 'none'
                 }}
               >
-                {/* Floating Animated Bubbles inside Liquid */}
-                {fillPercent > 0 && (
+                {/* Floating Animated Bubbles inside Liquid (Disabled in Clutter Reduction) */}
+                {fillPercent > 0 && !isReduced && (
                   <>
                     <span className="absolute left-[15%] bottom-2 w-2.5 h-2.5 rounded-full bg-white/70 shadow-xs animate-bounce" style={{ animationDuration: '2.2s' }} />
                     <span className="absolute left-[35%] top-2 w-1.5 h-1.5 rounded-full bg-white/80 shadow-xs animate-pulse" style={{ animationDuration: '1.6s' }} />

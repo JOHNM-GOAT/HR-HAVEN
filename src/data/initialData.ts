@@ -1,15 +1,38 @@
-import { BurnoutMetrics, MoodLog, WellnessReminder, PeerBadge, ChatMessage, BoundaryGuardConfig, AccessibilitySettings, UserAccount, UserProfile } from '../types/wellness';
+import { BurnoutMetrics, MoodLog, WellnessReminder, PeerBadge, ChatMessage, BoundaryGuardConfig, AccessibilitySettings, UserAccount, UserProfile, HrNotification, DeletedUserAccount } from '../types/wellness';
+
+export const initialHrNotifications: HrNotification[] = [
+  {
+    id: 'hr-notif-1',
+    type: 'teammate_flag',
+    targetTeammate: 'David Kim',
+    reason: 'Logged 18+ overtime hours this week on the billing migration, seems deeply fatigued.',
+    submittedByAnonymous: true,
+    status: 'pending',
+    timestamp: '15 mins ago',
+    severity: 'high'
+  },
+  {
+    id: 'hr-notif-2',
+    type: 'burnout_alert',
+    targetTeammate: 'Engineering - Backend Team',
+    reason: 'Automated telemetry detected 6 consecutive days of late-night quiet-hour activity.',
+    submittedByAnonymous: true,
+    status: 'in_progress',
+    timestamp: '2 hours ago',
+    severity: 'medium'
+  }
+];
 
 export const initialUserProfile: UserProfile = {
-  id: 'usr-001',
-  name: 'Alex Mercer',
-  email: 'johnmicooh.ugot@axionhr.com',
-  role: 'employee',
-  department: 'Engineering & Product',
-  jobTitle: 'Senior Full Stack Engineer',
-  phoneNumber: '+1 (555) 438-9210',
-  employeeId: 'AX-89421',
-  joinDate: 'January 15, 2024',
+  id: 'admin-001',
+  name: 'System Administrator',
+  email: 'admin@axionhr.com',
+  role: 'admin',
+  department: 'Executive IT & Administration',
+  jobTitle: 'System Administrator',
+  phoneNumber: '+1 (555) 019-2831',
+  employeeId: 'AX-ADMIN-01',
+  joinDate: 'January 1, 2026',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
   theme: 'light',
   address: {
@@ -19,7 +42,7 @@ export const initialUserProfile: UserProfile = {
     zipCode: '94107',
     country: 'United States'
   },
-  emergencyContactName: 'Taylor Mercer',
+  emergencyContactName: 'Taylor Vance',
   emergencyContactPhone: '+1 (555) 890-1234'
 };
 
@@ -51,10 +74,10 @@ export const initialMoodLogs: MoodLog[] = [
 ];
 
 export const initialReminders: WellnessReminder[] = [
-  { id: 'r1', title: 'Hydration Break', description: 'Drink a glass of water (Target: 2.5L daily)', type: 'hydration', intervalMinutes: 45, isActive: true },
-  { id: 'r2', title: 'Posture & Shoulder Stretch', description: '2-minute neck roll and shoulder stretch', type: 'stretch', intervalMinutes: 60, isActive: true },
-  { id: 'r3', title: 'Eye Rest (20-20-20 Rule)', description: 'Look 20 feet away for 20 seconds', type: 'eye_rest', intervalMinutes: 20, isActive: true },
-  { id: 'r4', title: 'Short Walk / Step Out', description: 'Step away from desk for fresh air', type: 'short_walk', intervalMinutes: 120, isActive: true },
+  { id: 'r1', title: 'Hydration Break', description: 'Drink a glass of water (Target: 2.5L daily)', type: 'hydration', intervalMinutes: 45, isActive: false },
+  { id: 'r2', title: 'Posture & Shoulder Stretch', description: '2-minute neck roll and shoulder stretch', type: 'stretch', intervalMinutes: 60, isActive: false },
+  { id: 'r3', title: 'Eye Rest (20-20-20 Rule)', description: 'Look 20 feet away for 20 seconds', type: 'eye_rest', intervalMinutes: 20, isActive: false },
+  { id: 'r4', title: 'Short Walk / Step Out', description: 'Step away from desk for fresh air', type: 'short_walk', intervalMinutes: 120, isActive: false },
 ];
 
 export const initialBadges: PeerBadge[] = [
@@ -130,87 +153,18 @@ export const teamBurnoutOverview = [
 
 export const initialUserAccounts: UserAccount[] = [
   {
-    id: 'usr-001',
-    name: 'Alex Mercer',
-    email: 'johnmicooh.ugot@axionhr.com',
-    password: 'password123',
-    role: 'employee',
-    department: 'Engineering',
+    id: 'admin-001',
+    name: 'System Administrator',
+    email: 'admin@axionhr.com',
+    password: 'admin',
+    role: 'admin',
+    department: 'Executive IT & Administration',
     status: 'active',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    createdAt: '2025-01-15',
+    createdAt: '2026-01-01',
     lastActive: 'Just now'
-  },
-  {
-    id: 'usr-002',
-    name: 'Elena Rostova',
-    email: 'hr.director@axionhr.com',
-    password: 'password123',
-    role: 'hr_manager',
-    department: 'Human Resources',
-    status: 'active',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-    createdAt: '2024-11-01',
-    lastActive: '5 mins ago'
-  },
-  {
-    id: 'usr-003',
-    name: 'Marcus Vance',
-    email: 'admin.vance@axionhr.com',
-    password: 'password123',
-    role: 'admin',
-    department: 'Executive IT',
-    status: 'active',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-    createdAt: '2024-08-10',
-    lastActive: '12 mins ago'
-  },
-  {
-    id: 'usr-004',
-    name: 'Sarah Lin',
-    email: 'sarah.lin@axionhr.com',
-    password: 'password123',
-    role: 'employee',
-    department: 'Product Design',
-    status: 'active',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    createdAt: '2025-02-10',
-    lastActive: '1 hour ago'
-  },
-  {
-    id: 'usr-005',
-    name: 'David Chen',
-    email: 'david.chen@axionhr.com',
-    password: 'password123',
-    role: 'employee',
-    department: 'Customer Success',
-    status: 'active',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    createdAt: '2025-03-01',
-    lastActive: 'Yesterday'
-  },
-  {
-    id: 'usr-006',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@axionhr.com',
-    password: 'password123',
-    role: 'hr_manager',
-    department: 'Human Resources',
-    status: 'active',
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
-    createdAt: '2025-01-20',
-    lastActive: '3 hours ago'
-  },
-  {
-    id: 'usr-007',
-    name: 'Robert Sterling',
-    email: 'r.sterling@axionhr.com',
-    password: 'password123',
-    role: 'employee',
-    department: 'Sales Operations',
-    status: 'disabled',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-    createdAt: '2024-09-15',
-    lastActive: '2 weeks ago'
   }
 ];
+
+export const initialDeletedAccounts: DeletedUserAccount[] = [];
+

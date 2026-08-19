@@ -26,19 +26,22 @@ export const Sidebar: React.FC = () => {
     isSidebarOpen, 
     toggleSidebar,
     userProfile,
-    isDarkMode
+    isDarkMode,
+    unreadHrNotificationCount
   } = useWellness();
+
+  const hrBadge = unreadHrNotificationCount > 0 ? `${unreadHrNotificationCount} Alerts` : 'HR';
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode; badge?: string }[] = 
     userRole === 'admin'
       ? [
           { id: 'accounts', label: 'Account Management', icon: <UserCog className="w-5 h-5" />, badge: 'Admin' },
-          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: 'HR' },
+          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
           { id: 'settings', label: 'Settings & Profile', icon: <Settings className="w-5 h-5" /> }
         ]
       : userRole === 'hr_manager' 
       ? [
-          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: 'HR' },
+          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
           { id: 'settings', label: 'Settings & Profile', icon: <Settings className="w-5 h-5" /> }
         ]
       : [

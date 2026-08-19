@@ -6,8 +6,13 @@ import { WellnessProvider } from "../context/WellnessContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AxionHR Haven - Workplace Well-Being Platform",
+  title: "Haven AxionHR",
   description: "AI-powered workplace well-being platform helping employees prevent burnout with continuous privacy-first insights, physical guidance, and peer recognition.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

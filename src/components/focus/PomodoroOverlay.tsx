@@ -26,9 +26,12 @@ export const PomodoroOverlay: React.FC = () => {
     setPomodoroMode,
     togglePomodoroMinimized,
     closePomodoroOverlay,
+    activeTab,
     setActiveTab,
+    accessibility,
     isDarkMode
   } = useWellness();
+  const isReduced = accessibility.reducedMotion;
 
   // Glide / Drag Position State (Free Floating Coordinates)
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -156,7 +159,8 @@ export const PomodoroOverlay: React.FC = () => {
     };
   }, [isDragging]);
 
-  if (!pomodoro.isOverlayVisible) {
+  // Automatically hide floating overlay on the Adaptive Focus Mode tab to avoid redundant timer graphics
+  if (!pomodoro.isOverlayVisible || activeTab === 'inclusive') {
     return null;
   }
 
@@ -247,7 +251,7 @@ export const PomodoroOverlay: React.FC = () => {
                 isDarkMode ? 'text-slate-400' : 'text-slate-500'
               }`}>
                 {pomodoro.mode === 'break' ? 'Break' : 'Focus'}
-                {pomodoro.isRunning && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />}
+                {pomodoro.isRunning && <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${!isReduced ? 'animate-ping' : ''}`} />}
               </span>
             </div>
 
@@ -301,7 +305,7 @@ export const PomodoroOverlay: React.FC = () => {
                   }`}>
                     {pomodoro.mode === 'break' ? 'Restorative Break' : 'Deep Focus Block'}
                     {pomodoro.isRunning && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${!isReduced ? 'animate-ping' : ''}`} />
                     )}
                   </h4>
                   <p className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>

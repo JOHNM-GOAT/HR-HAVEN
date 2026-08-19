@@ -4,9 +4,10 @@ import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
 
 export const ElectricPlasmaShield: React.FC = () => {
-  const { boundaryConfig, toggleBoundaryShield, isDarkMode } = useWellness();
+  const { boundaryConfig, toggleBoundaryShield, isDarkMode, accessibility } = useWellness();
   const isActive = boundaryConfig.activeShield;
   const isLight = !isDarkMode;
+  const isReduced = accessibility.reducedMotion;
 
   // Adaptive High-Contrast Colors
   const lightningPrimary = isLight ? '#0284c7' : '#67e8f9';
@@ -28,22 +29,26 @@ export const ElectricPlasmaShield: React.FC = () => {
       role="button"
       tabIndex={0}
       title={isActive ? 'Click to Pause Boundary Shield' : 'Click to Engage Boundary Shield'}
-      className="relative flex flex-col items-center justify-center cursor-pointer select-none group py-2"
+      className={`relative flex flex-col items-center justify-center cursor-pointer select-none group py-2 ${
+        isReduced ? '' : 'transition-transform duration-300 hover:scale-105'
+      }`}
     >
       {/* Outer Glowing Energy Field Container */}
       <div className="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center">
-        {/* Soft Ambient Energy Radial Backlight */}
-        <div
-          className={`absolute inset-2 rounded-full transition-all duration-700 pointer-events-none ${
-            isActive
-              ? isLight
-                ? 'bg-gradient-to-r from-blue-200/60 via-cyan-100/80 to-blue-200/60 blur-xl scale-105 animate-pulse'
-                : 'bg-gradient-to-r from-blue-500/25 via-cyan-400/30 to-blue-600/25 blur-2xl scale-110 animate-pulse'
-              : isLight
-                ? 'bg-slate-100/80 blur-md scale-95'
-                : 'bg-slate-500/10 blur-xl scale-90'
-          }`}
-        />
+        {/* Soft Ambient Energy Radial Backlight (Disabled in Clutter Reduction) */}
+        {!isReduced && (
+          <div
+            className={`absolute inset-2 rounded-full transition-all duration-700 pointer-events-none ${
+              isActive
+                ? isLight
+                  ? 'bg-gradient-to-r from-blue-200/60 via-cyan-100/80 to-blue-200/60 blur-xl scale-105 animate-pulse'
+                  : 'bg-gradient-to-r from-blue-500/25 via-cyan-400/30 to-blue-600/25 blur-2xl scale-110 animate-pulse'
+                : isLight
+                  ? 'bg-slate-100/80 blur-md scale-95'
+                  : 'bg-slate-500/10 blur-xl scale-90'
+            }`}
+          />
+        )}
 
         {/* Ambient Floor Glow Pool */}
         <div
@@ -108,14 +113,14 @@ export const ElectricPlasmaShield: React.FC = () => {
               cy="120"
               r="95"
               fill="url(#corona-grad)"
-              className="animate-pulse"
+              className={!isReduced ? 'animate-pulse' : ''}
               style={{ animationDuration: '3s' }}
             />
           )}
 
           {/* Layer 1: Clockwise Rotating Outer Lightning Arc Ring */}
           <g
-            className={isActive ? 'animate-spin' : ''}
+            className={isActive && !isReduced ? 'animate-spin' : ''}
             style={{ transformOrigin: '120px 120px', animationDuration: '14s' }}
           >
             {/* Fractal Lightning Ring 1 */}
@@ -146,7 +151,7 @@ export const ElectricPlasmaShield: React.FC = () => {
 
           {/* Layer 2: Counter-Rotating Secondary Lightning Filaments */}
           <g
-            className={isActive ? 'animate-spin' : ''}
+            className={isActive && !isReduced ? 'animate-spin' : ''}
             style={{ transformOrigin: '120px 120px', animationDuration: '9s', animationDirection: 'reverse' }}
           >
             <path
@@ -173,7 +178,7 @@ export const ElectricPlasmaShield: React.FC = () => {
           {/* Layer 3: High-Frequency Electric Spark Tendrils */}
           {isActive && (
             <g
-              className="animate-spin"
+              className={!isReduced ? 'animate-spin' : ''}
               style={{ transformOrigin: '120px 120px', animationDuration: '5s' }}
             >
               <path
@@ -240,8 +245,8 @@ export const ElectricPlasmaShield: React.FC = () => {
           </g>
         </svg>
 
-        {/* Dynamic Center Sparkle Burst */}
-        {isActive && (
+        {/* Dynamic Center Sparkle Burst (Disabled in Clutter Reduction) */}
+        {isActive && !isReduced && (
           <>
             <span
               className={`absolute top-10 left-12 w-2.5 h-2.5 rounded-full shadow-md animate-ping pointer-events-none ${

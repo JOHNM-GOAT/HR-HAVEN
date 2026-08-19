@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --bg-canvas: #f8fafc;
@@ -20,6 +22,39 @@
 
 .high-contrast {
   filter: contrast(125%) brightness(100%);
+}
+
+/* Clutter Reduction / Neurodivergent Focus Mode Styles */
+.clutter-reduced *,
+.clutter-reduced *::before,
+.clutter-reduced *::after {
+  animation-duration: 0.0001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.0001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.clutter-reduced .animate-spin,
+.clutter-reduced .animate-ping,
+.clutter-reduced .animate-pulse,
+.clutter-reduced .animate-bounce,
+.clutter-reduced .animate-breathe,
+.clutter-reduced .animate-pulse-glow,
+.clutter-reduced .emoji-thriving,
+.clutter-reduced .emoji-good,
+.clutter-reduced .emoji-okay,
+.clutter-reduced .emoji-stressed,
+.clutter-reduced .emoji-exhausted {
+  animation: none !important;
+  transform: none !important;
+}
+
+.clutter-reduced .decorative-glow,
+.clutter-reduced .decorative-particle,
+.clutter-reduced .decorative-sparkle,
+.clutter-reduced .decorative-blur {
+  display: none !important;
+  opacity: 0 !important;
 }
 
 /* Micro Animations */
