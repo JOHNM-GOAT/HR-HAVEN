@@ -16,7 +16,16 @@ import {
   X,
   TrendingUp,
   ShieldCheck,
-  Activity
+  Activity,
+  Palmtree,
+  Calendar,
+  Sparkles,
+  Heart,
+  Stethoscope,
+  Home,
+  Cake,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 
 export const HrExecutiveView: React.FC = () => {
@@ -25,12 +34,16 @@ export const HrExecutiveView: React.FC = () => {
     unreadHrNotificationCount,
     dismissHrNotification,
     resolveHrNotification,
+    ptoRequests,
+    reviewPtoRequest,
+    teamShifts,
     setToastNotification,
     isDarkMode
   } = useWellness();
 
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
   const [activeAlertFilter, setActiveAlertFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [shiftFilter, setShiftFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   const handleIntervention = (dept: string, action: string) => {
     setToastNotification(`HR Intervention triggered for ${dept}: ${action}`);
@@ -331,7 +344,6 @@ export const HrExecutiveView: React.FC = () => {
                       {item.overworkingCount > 0 ? `${item.overworkingCount} Members Over 50h/wk` : 'No Overtime Flagged'}
                     </td>
 
-                    {/* Action Button */}
                     <td className="p-3.5 text-right">
                       <button
                         onClick={() => handleIntervention(item.department, 'Scheduled Meeting-Free Focus Friday')}
@@ -345,6 +357,317 @@ export const HrExecutiveView: React.FC = () => {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Live Shift Attendance & Time-In Hub */}
+      <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f]' : 'border-slate-200 bg-white'} space-y-6`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Live Shift Attendance & Time-In Board
+              </h3>
+              {teamShifts.filter(s => s.status === 'active').length > 0 ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  {teamShifts.filter(s => s.status === 'active').length} On Shift Now
+                </span>
+              ) : (
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  All Staff Off Duty
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Real-time company attendance telemetry tracking who is clocked in, active shifts, and overtime hours.
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 self-start sm:self-auto">
+            <button
+              onClick={() => setShiftFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                shiftFilter === 'all'
+                  ? 'bg-white dark:bg-[#1f222e] text-slate-900 dark:text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              All ({teamShifts.length})
+            </button>
+            <button
+              onClick={() => setShiftFilter('active')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                shiftFilter === 'active'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              🟢 Active ({teamShifts.filter(s => s.status === 'active').length})
+            </button>
+            <button
+              onClick={() => setShiftFilter('completed')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                shiftFilter === 'completed'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              Completed ({teamShifts.filter(s => s.status === 'completed').length})
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Attendance Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-emerald-50/70 border-emerald-200'}`}>
+            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Currently Clocked In</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                {teamShifts.filter(s => s.status === 'active').length}
+              </span>
+              <span className="text-xs text-emerald-700/80 dark:text-emerald-400/80">Employees Active</span>
+            </div>
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#12141a] border-[#262b3a]' : 'bg-slate-50 border-slate-200'}`}>
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Completed Today</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {teamShifts.filter(s => s.status === 'completed').length}
+              </span>
+              <span className="text-xs text-slate-400">Shifts Finished</span>
+            </div>
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-amber-950/20 border-amber-800/40' : 'bg-amber-50/70 border-amber-200'}`}>
+            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">Overtime Logged</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                {(teamShifts.reduce((acc, curr) => acc + curr.overtimeSeconds, 0) / 3600).toFixed(1)}h
+              </span>
+              <span className="text-xs text-amber-700/80 dark:text-amber-400/80">Total OT Accumulated</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Attendance Shift Records List */}
+        <div className="space-y-3">
+          {teamShifts.filter(s => shiftFilter === 'all' || s.status === shiftFilter).length === 0 ? (
+            <div className="p-8 text-center border rounded-2xl border-dashed border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {shiftFilter === 'active'
+                  ? 'No employees are currently clocked in.'
+                  : 'No attendance logs recorded yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {teamShifts
+                .filter(s => shiftFilter === 'all' || s.status === shiftFilter)
+                .map(shift => {
+                  const isShiftActive = shift.status === 'active';
+                  const workedHours = (shift.totalWorkedSeconds / 3600).toFixed(1);
+                  const overtimeHours = (shift.overtimeSeconds / 3600).toFixed(1);
+
+                  return (
+                    <div
+                      key={shift.id}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isShiftActive
+                          ? isDarkMode
+                            ? 'bg-emerald-950/20 border-emerald-800/60 shadow-xs'
+                            : 'bg-emerald-50/40 border-emerald-200 shadow-xs'
+                          : isDarkMode
+                          ? 'bg-[#12141a] border-[#262b3a]'
+                          : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <img
+                          src={shift.userAvatar}
+                          alt={shift.userName}
+                          className="w-10 h-10 rounded-2xl border-2 border-blue-500 object-cover shrink-0"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {shift.userName}
+                            </span>
+                            <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              • {shift.department}
+                            </span>
+                            {isShiftActive ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white flex items-center gap-1 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                On Shift (Live)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                Off Duty
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                            📅 {shift.date} • Clocked in at <strong className="text-blue-600 dark:text-blue-400 font-bold">{shift.clockInTime}</strong>
+                            {shift.clockOutTime && (
+                              <span> &rarr; Clocked out at <strong className="text-slate-700 dark:text-slate-300 font-bold">{shift.clockOutTime}</strong></span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                        <div className="text-right">
+                          <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {workedHours}h Logged
+                          </span>
+                          {parseFloat(overtimeHours) > 0 ? (
+                            <span className="text-[10px] font-extrabold text-amber-500 block">
+                              +{overtimeHours}h Overtime
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 block">
+                              Standard 8.0h Shift
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Team Rest & Leave Approvals Vault */}
+      <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f]' : 'border-slate-200 bg-white'} space-y-6`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Palmtree className="w-5 h-5 text-cyan-500" />
+                Team Leave Approvals & Rest Vault
+              </h3>
+              {ptoRequests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+                  {ptoRequests.filter(r => r.status === 'pending').length} Action Required
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Review employee time-off requests. 1-Day mental health recharge leaves are auto-approved by AI Wellness Guard.
+            </p>
+          </div>
+        </div>
+
+        {/* Requests List */}
+        <div className="space-y-3">
+          {ptoRequests.length === 0 ? (
+            <div className="p-8 text-center border rounded-2xl border-dashed border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400">No team leave requests recorded.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {ptoRequests.map(req => {
+                const getCategoryLabel = () => {
+                  switch (req.category) {
+                    case 'mental_health':
+                      return '🧘 Mental Health / Wellness';
+                    case 'sick':
+                      return '🤒 Medical / Sick';
+                    case 'personal':
+                      return '🏡 Personal & Family Care';
+                    case 'birthday':
+                      return '🎂 Birthday Perk';
+                    default:
+                      return '🏖️ Annual Vacation';
+                  }
+                };
+
+                return (
+                  <div
+                    key={req.id}
+                    className={`p-4.5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                      isDarkMode
+                        ? 'bg-[#12141a] border-[#262b3a] hover:border-slate-700'
+                        : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-xs'
+                    }`}
+                  >
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <img
+                        src={req.userAvatar}
+                        alt={req.userName}
+                        className="w-10 h-10 rounded-2xl border-2 border-blue-500 object-cover shrink-0 shadow-xs"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {req.userName}
+                          </span>
+                          <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            • {req.department}
+                          </span>
+                          <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-200 dark:border-cyan-800">
+                            {getCategoryLabel()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 font-medium">
+                          📅 {req.startDate} {req.startDate !== req.endDate ? `to ${req.endDate}` : ''}{' '}
+                          <strong className="text-blue-600 dark:text-blue-400 font-bold">
+                            ({req.totalDays} {req.totalDays === 1 ? 'Day' : 'Days'})
+                          </strong>
+                          {req.reason && ` — "${req.reason}"`}
+                        </p>
+                        {req.reviewedBy && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Status: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{req.status.toUpperCase()}</span> by {req.reviewedBy}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+                      {req.status === 'pending' ? (
+                        <>
+                          <button
+                            onClick={() => reviewPtoRequest(req.id, 'approved')}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => reviewPtoRequest(req.id, 'rejected')}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all border cursor-pointer active:scale-95 ${
+                              isDarkMode
+                                ? 'bg-rose-950/40 border-rose-800/60 text-rose-300 hover:bg-rose-900/50'
+                                : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                            }`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Decline</span>
+                          </button>
+                        </>
+                      ) : req.status === 'approved' ? (
+                        <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <span>{req.autoApproved ? 'Auto-Approved' : 'Approved'}</span>
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                          {req.status.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

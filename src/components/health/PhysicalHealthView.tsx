@@ -9,22 +9,86 @@ import {
   Activity,
   Footprints,
   Play,
-  CalendarCheck
+  CalendarCheck,
+  HelpCircle,
+  Info
 } from 'lucide-react';
 import { WaterBottleChamber } from './WaterBottleChamber';
 
 export const PhysicalHealthView: React.FC = () => {
   const { reminders, toggleReminder, setActiveExercise, waterCups, isDarkMode } = useWellness();
 
+  const PhysicalTooltip: React.FC<{
+    icon?: 'info' | 'help';
+    content: React.ReactNode;
+    align?: 'left' | 'center' | 'right';
+    className?: string;
+  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+      <div
+        className={`relative inline-flex items-center group ${className}`}
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(prev => !prev);
+          }}
+          aria-label="More information"
+          className="p-1 rounded-full text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        >
+          {icon === 'info' ? (
+            <Info className="w-3.5 h-3.5" />
+          ) : (
+            <HelpCircle className="w-3.5 h-3.5" />
+          )}
+        </button>
+
+        {/* Tooltip Floating Card */}
+        <div
+          role="tooltip"
+          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
+            align === 'left'
+              ? 'left-0'
+              : align === 'right'
+              ? 'right-0'
+              : 'left-1/2 -translate-x-1/2'
+          } ${
+            isOpen
+              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
+          } ${
+            isDarkMode
+              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
+              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
+          }`}
+        >
+          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
+            {content}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-
+      <div className="flex items-center gap-2">
         <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           Smart Physical Health & Micro-Break Guidance
         </h2>
-
+        <PhysicalTooltip
+          icon="help"
+          align="left"
+          content="Monitor daily water intake, launch guided ergonomic and breathwork micro-breaks, and configure calendar-aware wellness reminders."
+        />
       </div>
 
       {/* Top Interactive Cards Grid */}
@@ -39,9 +103,13 @@ export const PhysicalHealthView: React.FC = () => {
                   }`}>
                   <Droplet className="w-5 h-5 fill-blue-600" />
                 </div>
-                <div>
+                <div className="flex items-center gap-1.5">
                   <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Smart Hydration Tracker</h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target: 10 Cups (2.5 Liters) Daily</p>
+                  <PhysicalTooltip
+                    icon="help"
+                    align="left"
+                    content="Log your daily water consumption toward the recommended 10 cups (2.5L) daily goal."
+                  />
                 </div>
               </div>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${waterCups >= 10
@@ -66,9 +134,13 @@ export const PhysicalHealthView: React.FC = () => {
                 }`}>
                 <Heart className="w-5 h-5 fill-rose-600" />
               </div>
-              <div>
+              <div className="flex items-center gap-1.5">
                 <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Guided Micro-Breaks</h3>
-
+                <PhysicalTooltip
+                  icon="help"
+                  align="left"
+                  content="Interactive 2-minute restorative sessions for posture stretching, 20-20-20 eye strain relief, and diaphragmatic breathing."
+                />
               </div>
             </div>
 
@@ -81,7 +153,7 @@ export const PhysicalHealthView: React.FC = () => {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🧘‍♂️</span>
+
                   <div>
                     <h4 className={`text-xs font-bold transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-700'
                       }`}>Posture & Neck Stretch</h4>
@@ -102,7 +174,7 @@ export const PhysicalHealthView: React.FC = () => {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">👁️</span>
+
                   <div>
                     <h4 className={`text-xs font-bold transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-700'
                       }`}>20-20-20 Eye Rest</h4>
@@ -123,7 +195,7 @@ export const PhysicalHealthView: React.FC = () => {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🫁</span>
+
                   <div>
                     <h4 className={`text-xs font-bold transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-700'
                       }`}>Diaphragmatic Breathwork</h4>
@@ -144,12 +216,16 @@ export const PhysicalHealthView: React.FC = () => {
       <div className={`enterprise-card p-6 border ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white' : 'bg-white border-slate-200 text-slate-900'
         }`}>
         <div className="flex items-center justify-between mb-4">
-          <div>
+          <div className="flex items-center gap-1.5">
             <h3 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               <CalendarCheck className="w-5 h-5 text-blue-500" />
               Calendar-Aware Reminders
             </h3>
-
+            <PhysicalTooltip
+              icon="help"
+              align="left"
+              content="Automated background notifications scheduled around your calendar to remind you to stretch, hydrate, and rest your eyes."
+            />
           </div>
           <span className={`text-xs font-bold px-3 py-1 rounded-full border ${isDarkMode ? 'bg-blue-950/60 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'
             }`}>

@@ -1,27 +1,20 @@
-import { BurnoutMetrics, MoodLog, WellnessReminder, PeerBadge, ChatMessage, BoundaryGuardConfig, AccessibilitySettings, UserAccount, UserProfile, HrNotification, DeletedUserAccount } from '../types/wellness';
+import {
+  BurnoutMetrics,
+  MoodLog,
+  WellnessReminder,
+  PeerBadge,
+  ChatMessage,
+  BoundaryGuardConfig,
+  AccessibilitySettings,
+  UserAccount,
+  UserProfile,
+  HrNotification,
+  DeletedUserAccount,
+  PtoRequest,
+  PtoBalance
+} from '../types/wellness';
 
-export const initialHrNotifications: HrNotification[] = [
-  {
-    id: 'hr-notif-1',
-    type: 'teammate_flag',
-    targetTeammate: 'David Kim',
-    reason: 'Logged 18+ overtime hours this week on the billing migration, seems deeply fatigued.',
-    submittedByAnonymous: true,
-    status: 'pending',
-    timestamp: '15 mins ago',
-    severity: 'high'
-  },
-  {
-    id: 'hr-notif-2',
-    type: 'burnout_alert',
-    targetTeammate: 'Engineering - Backend Team',
-    reason: 'Automated telemetry detected 6 consecutive days of late-night quiet-hour activity.',
-    submittedByAnonymous: true,
-    status: 'in_progress',
-    timestamp: '2 hours ago',
-    severity: 'medium'
-  }
-];
+export const initialHrNotifications: HrNotification[] = [];
 
 export const initialUserProfile: UserProfile = {
   id: 'admin-001',
@@ -47,31 +40,20 @@ export const initialUserProfile: UserProfile = {
 };
 
 export const initialBurnoutMetrics: BurnoutMetrics = {
-  overallScore: 68, // Moderate-high risk alert
-  riskLevel: 'moderate',
-  meetingHoursWeekly: 24.5,
+  overallScore: 0, // Zero baseline (Low Risk 0-25)
+  riskLevel: 'low',
+  meetingHoursWeekly: 0,
   meetingHoursBenchmark: 15.0,
-  overtimeHoursWeekly: 9.2,
-  ptoDaysUsed: 3,
-  ptoDaysRemaining: 18,
-  afterHoursActivityCount: 14,
-  consecutiveWorkDays: 9,
-  trend: 'worsening',
-  riskFactors: [
-    'Meeting overload (+63% above team average)',
-    '14 late-night Slack & email messages after 7:00 PM',
-    '9 consecutive workdays without full disconnect',
-    'Low PTO consumption rate this quarter'
-  ]
+  overtimeHoursWeekly: 0,
+  ptoDaysUsed: 0,
+  ptoDaysRemaining: 20,
+  afterHoursActivityCount: 0,
+  consecutiveWorkDays: 0,
+  trend: 'stable',
+  riskFactors: []
 };
 
-export const initialMoodLogs: MoodLog[] = [
-  { id: '1', timestamp: 'Today, 9:15 AM', mood: 'stressed', energyLevel: 2, note: 'Back-to-back meetings all morning', isAnonymousToHr: true },
-  { id: '2', timestamp: 'Yesterday', mood: 'okay', energyLevel: 3, note: 'Finished sprint deliverables late', isAnonymousToHr: true },
-  { id: '3', timestamp: '3 days ago', mood: 'good', energyLevel: 4, note: 'Great focus time in afternoon', isAnonymousToHr: true },
-  { id: '4', timestamp: '4 days ago', mood: 'thriving', energyLevel: 5, note: 'Had weekend break!', isAnonymousToHr: true },
-  { id: '5', timestamp: '5 days ago', mood: 'exhausted', energyLevel: 1, note: 'Overtime session', isAnonymousToHr: true },
-];
+export const initialMoodLogs: MoodLog[] = [];
 
 export const initialReminders: WellnessReminder[] = [
   { id: 'r1', title: 'Hydration Break', description: 'Drink a glass of water (Target: 2.5L daily)', type: 'hydration', intervalMinutes: 45, isActive: false },
@@ -80,58 +62,24 @@ export const initialReminders: WellnessReminder[] = [
   { id: 'r4', title: 'Short Walk / Step Out', description: 'Step away from desk for fresh air', type: 'short_walk', intervalMinutes: 120, isActive: false },
 ];
 
-export const initialBadges: PeerBadge[] = [
-  {
-    id: 'b1',
-    senderName: 'Sarah Lin',
-    senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    recipientName: 'Alex Mercer (You)',
-    recipientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    badgeType: 'lifesaver',
-    message: 'Alex stepped in to handle the client presentation when I was sick. Total lifesaver!',
-    virtualCoffeeSent: true,
-    timestamp: '2 hours ago'
-  },
-  {
-    id: 'b2',
-    senderName: 'David Chen',
-    senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    recipientName: 'Elena Rostova',
-    recipientAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-    badgeType: 'focus_champion',
-    message: 'Thanks for respecting focus mode hours and batching non-urgent requests!',
-    virtualCoffeeSent: false,
-    timestamp: 'Yesterday'
-  },
-  {
-    id: 'b3',
-    senderName: 'Alex Mercer (You)',
-    senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    recipientName: 'Marcus Vance',
-    recipientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-    badgeType: 'team_anchor',
-    message: 'Always keeping the team grounded during intense release sprints.',
-    virtualCoffeeSent: true,
-    timestamp: '3 days ago'
-  }
-];
+export const initialBadges: PeerBadge[] = [];
 
 export const initialChatMessages: ChatMessage[] = [
   {
     id: 'm1',
     sender: 'ai',
-    text: 'Hello Alex! I am your AI Haven Wellness Coach. I noticed you have had 24+ meeting hours this week and late-night activity. How can I help you adjust your schedule or practice a micro-break today?',
-    timestamp: '10:00 AM',
-    category: 'burnout'
+    text: 'Hello! I am your AI Haven Wellness Coach. How can I support your focus, physical health, and work-life balance today?',
+    timestamp: 'Just now',
+    category: 'mindfulness'
   }
 ];
 
 export const initialBoundaryConfig: BoundaryGuardConfig = {
-  activeShield: true,
+  activeShield: false,
   quietHoursStart: '18:30',
   quietHoursEnd: '08:30',
-  delayedMessagesCount: 6,
-  autoReplyMessage: 'AxionHR Haven Boundary Guard: Alex is currently disconnected for well-being hours. Messages will be delivered tomorrow at 8:30 AM.'
+  delayedMessagesCount: 0,
+  autoReplyMessage: 'AxionHR Haven Boundary Guard: User is currently disconnected for well-being hours. Messages will be delivered tomorrow at 8:30 AM.'
 };
 
 export const initialAccessibilitySettings: AccessibilitySettings = {
@@ -144,11 +92,11 @@ export const initialAccessibilitySettings: AccessibilitySettings = {
 };
 
 export const teamBurnoutOverview = [
-  { department: 'Engineering - Backend', riskScore: 74, status: 'high', totalMembers: 14, overworkingCount: 6 },
-  { department: 'Product Design & UX', riskScore: 42, status: 'low', totalMembers: 8, overworkingCount: 1 },
-  { department: 'Customer Success', riskScore: 65, status: 'moderate', totalMembers: 12, overworkingCount: 4 },
-  { department: 'Marketing & Growth', riskScore: 38, status: 'low', totalMembers: 10, overworkingCount: 0 },
-  { department: 'Sales Operations', riskScore: 79, status: 'high', totalMembers: 16, overworkingCount: 8 }
+  { department: 'Engineering - Backend', riskScore: 18, status: 'low', totalMembers: 14, overworkingCount: 0 },
+  { department: 'Product Design & UX', riskScore: 15, status: 'low', totalMembers: 8, overworkingCount: 0 },
+  { department: 'Customer Success', riskScore: 22, status: 'low', totalMembers: 12, overworkingCount: 0 },
+  { department: 'Marketing & Growth', riskScore: 12, status: 'low', totalMembers: 10, overworkingCount: 0 },
+  { department: 'Sales Operations', riskScore: 20, status: 'low', totalMembers: 16, overworkingCount: 0 }
 ];
 
 export const initialUserAccounts: UserAccount[] = [
@@ -163,8 +111,40 @@ export const initialUserAccounts: UserAccount[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
     createdAt: '2026-01-01',
     lastActive: 'Just now'
+  },
+  {
+    id: 'hr-001',
+    name: 'Sarah Jenkins',
+    email: 'hr@axionhr.com',
+    password: 'hr123',
+    role: 'hr_manager',
+    department: 'People & Culture',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    createdAt: '2026-01-01',
+    lastActive: '10 mins ago'
+  },
+  {
+    id: 'emp-001',
+    name: 'Alex Rivera',
+    email: 'employee@axionhr.com',
+    password: 'emp123',
+    role: 'employee',
+    department: 'Engineering',
+    status: 'active',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    createdAt: '2026-01-01',
+    lastActive: 'Just now'
   }
 ];
 
 export const initialDeletedAccounts: DeletedUserAccount[] = [];
 
+export const initialPtoBalance: PtoBalance = {
+  totalAllowance: 20,
+  usedDays: 0,
+  pendingDays: 0,
+  remainingDays: 20
+};
+
+export const initialPtoRequests: PtoRequest[] = [];

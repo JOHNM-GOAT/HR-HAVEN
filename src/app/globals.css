@@ -359,3 +359,72 @@ html.dark .hover\:bg-white\/70:hover {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Page Transition Animations */
+@keyframes pageFadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: pageFadeSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Skeleton Shimmer Keyframes */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.4) 25%,
+    rgba(241, 245, 249, 0.85) 50%,
+    rgba(226, 232, 240, 0.4) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s infinite linear;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(26, 29, 38, 0.6) 25%,
+    rgba(42, 47, 62, 0.85) 50%,
+    rgba(26, 29, 38, 0.6) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s infinite linear;
+}
+
+/* Top Progress Bar Glowing Accent */
+@keyframes topBarGlide {
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+  60% {
+    width: 75%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-top-loader {
+  animation: topBarGlide 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}

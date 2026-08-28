@@ -10,7 +10,6 @@ import {
   Moon,
   Monitor,
   Camera,
-  Upload,
   Check,
   Eye,
   EyeOff,
@@ -28,15 +27,6 @@ import {
   Bell,
   Volume2
 } from 'lucide-react';
-
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150'
-];
 
 export const SettingsView: React.FC = () => {
   const {
@@ -59,11 +49,30 @@ export const SettingsView: React.FC = () => {
   const [state, setState] = useState(userProfile.address.state || '');
   const [zipCode, setZipCode] = useState(userProfile.address.zipCode || '');
   const [country, setCountry] = useState(userProfile.address.country || 'United States');
-  const [avatarUrl, setAvatarUrl] = useState(userProfile.avatarUrl);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
 
-  // File Upload Reference
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Direct Avatar File Upload Reference
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle Direct Avatar File Upload
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image file must be under 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          updateUserProfile({ avatarUrl: reader.result });
+          setProfileSuccessMsg('Profile photo updated successfully!');
+          setTimeout(() => setProfileSuccessMsg(null), 4000);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Form State - Security / Password
   const [currentPassword, setCurrentPassword] = useState('');
@@ -76,31 +85,13 @@ export const SettingsView: React.FC = () => {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
 
-  // Handle Photo File Upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image file must be under 5MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setAvatarUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   // Save Profile Changes
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     updateUserProfile({
       name,
       phoneNumber,
-      avatarUrl,
+      avatarUrl: userProfile.avatarUrl,
       address: {
         street,
         city,
@@ -172,19 +163,38 @@ export const SettingsView: React.FC = () => {
       {/* Top Banner & Header */}
       <div className={`enterprise-card p-6 sm:p-7 border ${isDarkMode ? 'border-slate-800 bg-slate-900/90 text-white' : 'border-slate-200 bg-white'} shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6`}>
         <div className="flex items-center gap-4">
-          <div className="relative group">
-            <img
-              src={userProfile.avatarUrl}
-              alt={userProfile.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-blue-500 object-cover shadow-md"
+          {/* Avatar with Direct Click/Hover Photo Changer */}
+          <div className="relative group shrink-0">
+            <input
+              type="file"
+              ref={avatarInputRef}
+              onChange={handleAvatarUpload}
+              accept="image/*"
+              className="hidden"
             />
+            <div
+              onClick={() => avatarInputRef.current?.click()}
+              className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-blue-500 overflow-hidden shadow-md cursor-pointer transition-all active:scale-95 group-hover:border-blue-400 group-hover:shadow-blue-500/20"
+              title="Click to change profile photo"
+            >
+              <img
+                src={userProfile.avatarUrl}
+                alt={userProfile.name}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              {/* Semi-transparent dark hover overlay with Camera icon & text */}
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1">
+                <Camera className="w-5 h-5 mb-0.5 text-white animate-bounce" />
+                <span className="text-[10px] font-bold tracking-tight">Change</span>
+              </div>
+            </div>
+
+            {/* Subtle camera icon badge on bottom-right */}
             <button
-              onClick={() => {
-                setActiveSubTab('profile');
-                fileInputRef.current?.click();
-              }}
-              className="absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-blue-600 text-white shadow-md hover:bg-blue-700 transition-colors"
-              title="Change Photo"
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-md transition-all cursor-pointer border-2 border-white dark:border-slate-900"
+              title="Change Profile Photo"
             >
               <Camera className="w-3.5 h-3.5" />
             </button>
@@ -211,11 +221,10 @@ export const SettingsView: React.FC = () => {
         <div className={`flex flex-wrap p-1 rounded-2xl border ${isDarkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
           <button
             onClick={() => setActiveSubTab('profile')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'profile'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeSubTab === 'profile'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <User className="w-3.5 h-3.5" />
             <span>Profile</span>
@@ -223,11 +232,10 @@ export const SettingsView: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('security')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'security'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeSubTab === 'security'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <Lock className="w-3.5 h-3.5" />
             <span>Security</span>
@@ -235,11 +243,10 @@ export const SettingsView: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('appearance')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'appearance'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeSubTab === 'appearance'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <Sun className="w-3.5 h-3.5" />
             <span>Theme</span>
@@ -256,79 +263,6 @@ export const SettingsView: React.FC = () => {
               <span>{profileSuccessMsg}</span>
             </div>
           )}
-
-          {/* Section: Profile Photo */}
-          <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
-            <h3 className={`text-base font-bold mb-1 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              <Camera className="w-4 h-4 text-blue-600" />
-              Profile Photo
-            </h3>
-            <p className={`text-xs mb-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Upload your custom photo or pick from preset enterprise avatars.
-            </p>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <div className="relative group shrink-0">
-                <img
-                  src={avatarUrl}
-                  alt="Avatar Preview"
-                  className="w-24 h-24 rounded-2xl border-2 border-blue-500 object-cover shadow-md"
-                />
-              </div>
-
-              <div className="space-y-3 flex-1">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload New Photo</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl(PRESET_AVATARS[0])}
-                    className={`px-3 py-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
-                      isDarkMode ? 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    Reset to Default
-                  </button>
-                </div>
-
-                {/* Preset Avatar Gallery */}
-                <div className="pt-2">
-                  <p className={`text-[11px] font-semibold mb-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Or choose a preset avatar:
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {PRESET_AVATARS.map((url, idx) => (
-                      <button
-                        type="button"
-                        key={idx}
-                        onClick={() => setAvatarUrl(url)}
-                        className={`w-10 h-10 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                          avatarUrl === url ? 'border-blue-600 scale-105 shadow-md ring-2 ring-blue-500/20' : 'border-transparent opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Section: Basic Information & Name */}
           <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
@@ -353,9 +287,8 @@ export const SettingsView: React.FC = () => {
                     onChange={e => setName(e.target.value)}
                     required
                     placeholder="e.g. Alex Mercer"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
               </div>
@@ -370,9 +303,8 @@ export const SettingsView: React.FC = () => {
                     type="email"
                     value={userProfile.email}
                     disabled
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium opacity-70 cursor-not-allowed ${
-                      isDarkMode ? 'bg-slate-800/60 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
-                    }`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium opacity-70 cursor-not-allowed ${isDarkMode ? 'bg-slate-800/60 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                      }`}
                   />
                 </div>
                 <span className="text-[10px] text-slate-400 mt-1 block">Work email managed by corporate IT.</span>
@@ -389,9 +321,8 @@ export const SettingsView: React.FC = () => {
                     value={phoneNumber}
                     onChange={e => setPhoneNumber(e.target.value)}
                     placeholder="+1 (555) 000-0000"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
               </div>
@@ -406,9 +337,8 @@ export const SettingsView: React.FC = () => {
                     type="text"
                     value={`${userProfile.department} (${userProfile.jobTitle})`}
                     disabled
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium opacity-70 cursor-not-allowed ${
-                      isDarkMode ? 'bg-slate-800/60 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
-                    }`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium opacity-70 cursor-not-allowed ${isDarkMode ? 'bg-slate-800/60 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                      }`}
                   />
                 </div>
               </div>
@@ -435,9 +365,8 @@ export const SettingsView: React.FC = () => {
                   value={street}
                   onChange={e => setStreet(e.target.value)}
                   placeholder="e.g. 742 Innovation Way, Suite 400"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
                 />
               </div>
 
@@ -451,9 +380,8 @@ export const SettingsView: React.FC = () => {
                     value={city}
                     onChange={e => setCity(e.target.value)}
                     placeholder="San Francisco"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
 
@@ -466,9 +394,8 @@ export const SettingsView: React.FC = () => {
                     value={state}
                     onChange={e => setState(e.target.value)}
                     placeholder="CA"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
 
@@ -481,9 +408,8 @@ export const SettingsView: React.FC = () => {
                     value={zipCode}
                     onChange={e => setZipCode(e.target.value)}
                     placeholder="94107"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
 
@@ -496,9 +422,8 @@ export const SettingsView: React.FC = () => {
                     value={country}
                     onChange={e => setCountry(e.target.value)}
                     placeholder="United States"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                 </div>
               </div>
@@ -564,9 +489,8 @@ export const SettingsView: React.FC = () => {
                     onChange={e => setCurrentPassword(e.target.value)}
                     required
                     placeholder="Enter current password"
-                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                   <button
                     type="button"
@@ -591,9 +515,8 @@ export const SettingsView: React.FC = () => {
                     onChange={e => setNewPassword(e.target.value)}
                     required
                     placeholder="Minimum 6 characters"
-                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                   <button
                     type="button"
@@ -632,9 +555,8 @@ export const SettingsView: React.FC = () => {
                     onChange={e => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Repeat new password"
-                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
                   />
                   <button
                     type="button"
@@ -677,11 +599,10 @@ export const SettingsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTheme('light')}
-                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${
-                  theme === 'light'
+                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${theme === 'light'
                     ? 'border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-500/20'
                     : isDarkMode ? 'border-slate-700 bg-slate-800/80 hover:border-slate-600' : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                  }`}
               >
                 {theme === 'light' && (
                   <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
@@ -706,11 +627,10 @@ export const SettingsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
-                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${
-                  theme === 'dark'
+                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${theme === 'dark'
                     ? 'border-blue-600 bg-blue-950/30 shadow-md ring-2 ring-blue-500/20'
                     : isDarkMode ? 'border-slate-700 bg-slate-800/80 hover:border-slate-600' : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                  }`}
               >
                 {theme === 'dark' && (
                   <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
@@ -735,11 +655,10 @@ export const SettingsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTheme('system')}
-                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${
-                  theme === 'system'
+                className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative group ${theme === 'system'
                     ? 'border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-500/20'
                     : isDarkMode ? 'border-slate-700 bg-slate-800/80 hover:border-slate-600' : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                  }`}
               >
                 {theme === 'system' && (
                   <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">

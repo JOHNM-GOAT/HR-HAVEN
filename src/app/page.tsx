@@ -4,6 +4,7 @@ import React from 'react';
 import { useWellness } from '../context/WellnessContext';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Toast } from '../components/layout/Toast';
+import { BatchedToast } from '../components/layout/BatchedToast';
 import { ExerciseModal } from '../components/health/ExerciseModal';
 import { LoginPage } from '../components/auth/LoginPage';
 import { AxionLogo } from '../components/common/AxionLogo';
@@ -16,14 +17,20 @@ import { MentalWellbeingView } from '../components/mental/MentalWellbeingView';
 import { SocialConnectivityView } from '../components/social/SocialConnectivityView';
 import { CognitiveInclusivityView } from '../components/inclusive/CognitiveInclusivityView';
 import { BoundaryGuardView } from '../components/boundary/BoundaryGuardView';
+import { PtoHealthHubView } from '../components/pto/PtoHealthHubView';
 import { HrExecutiveView } from '../components/hr/HrExecutiveView';
 import { AccountManagementView } from '../components/admin/AccountManagementView';
 import { SettingsView } from '../components/settings/SettingsView';
 import { PomodoroOverlay } from '../components/focus/PomodoroOverlay';
 import { WellnessReminderToast } from '../components/health/WellnessReminderToast';
+import { PtoRequestModal } from '../components/pto/PtoRequestModal';
+import { AttendanceCalendarModal } from '../components/dashboard/AttendanceCalendarModal';
+import { TopNavigationProgress } from '../components/common/TopNavigationProgress';
+import { PageTransition } from '../components/common/PageTransition';
+import { ViewSkeleton } from '../components/common/ViewSkeleton';
 
 export default function Home() {
-  const { isAuthenticated, isAuthLoading, activeTab, accessibility, isSidebarOpen, toggleSidebar, isDarkMode } = useWellness();
+  const { isAuthenticated, isAuthLoading, activeTab, isNavigating, accessibility, isSidebarOpen, toggleSidebar, isDarkMode } = useWellness();
 
   if (isAuthLoading) {
     return (
@@ -73,6 +80,8 @@ export default function Home() {
         return <CognitiveInclusivityView />;
       case 'boundary':
         return <BoundaryGuardView />;
+      case 'pto':
+        return <PtoHealthHubView />;
       case 'hr':
         return <HrExecutiveView />;
       case 'accounts':
@@ -113,15 +122,26 @@ export default function Home() {
           </button>
         )}
 
+        <TopNavigationProgress />
+
         <div className="max-w-[1600px] mx-auto">
-          {renderActiveView()}
+          {isNavigating ? (
+            <ViewSkeleton tab={activeTab} />
+          ) : (
+            <PageTransition transitionKey={activeTab}>
+              {renderActiveView()}
+            </PageTransition>
+          )}
         </div>
       </main>
 
       <Toast />
+      <BatchedToast />
       <WellnessReminderToast />
       <ExerciseModal />
       <PomodoroOverlay />
+      <PtoRequestModal />
+      <AttendanceCalendarModal />
     </div>
   );
 }

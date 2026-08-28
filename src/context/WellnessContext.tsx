@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { 
   UserRole, 
   BurnoutMetrics, 
@@ -17,7 +17,13 @@ import {
   ThemeMode,
   PomodoroTimer,
   HrNotification,
-  DeletedUserAccount
+  DeletedUserAccount,
+  WorkShiftState,
+  WorkShiftRecord,
+  PtoRequest,
+  PtoBalance,
+  LeaveCategory,
+  LeaveStatus
 } from '../types/wellness';
 import { 
   initialBurnoutMetrics, 
@@ -30,11 +36,19 @@ import {
   initialUserAccounts,
   initialUserProfile,
   initialHrNotifications,
-  initialDeletedAccounts
+  initialDeletedAccounts,
+  initialPtoRequests,
+  initialPtoBalance
 } from '../data/initialData';
 import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
 
-export type NavTab = 'dashboard' | 'analytics' | 'physical' | 'mental' | 'social' | 'inclusive' | 'boundary' | 'hr' | 'accounts' | 'settings';
+export type NavTab = 'dashboard' | 'analytics' | 'physical' | 'mental' | 'social' | 'inclusive' | 'boundary' | 'pto' | 'hr' | 'accounts' | 'settings';
+
+export interface BatchedNotification {
+  id: string;
+  message: string;
+  timestamp: number;
+}
 
 interface WellnessContextType {
   isAuthenticated: boolean;
@@ -45,6 +59,7 @@ interface WellnessContextType {
 
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
+  isNavigating: boolean;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
   
@@ -124,11 +139,252 @@ interface WellnessContextType {
   removeWaterCup: () => void;
   resetWaterCups: () => void;
 
+  // Work Shift & Attendance State
+  workShift: WorkShiftState;
+  toggleClockInOut: () => void;
+  resetWorkShift: () => void;
+  teamShifts: WorkShiftRecord[];
+  isAttendanceModalOpen: boolean;
+  setIsAttendanceModalOpen: (open: boolean) => void;
+
+  // PTO & Time-Off Management State
+  ptoRequests: PtoRequest[];
+  ptoBalance: PtoBalance;
+  isPtoModalOpen: boolean;
+  setIsPtoModalOpen: (open: boolean) => void;
+  submitPtoRequest: (data: { category: LeaveCategory; startDate: string; endDate: string; totalDays: number; reason?: string }) => void;
+  reviewPtoRequest: (requestId: string, status: 'approved' | 'rejected') => void;
+  cancelPtoRequest: (requestId: string) => void;
+
   toastNotification: string | null;
-  setToastNotification: (msg: string | null) => void;
+  setToastNotification: (msg: string | null, urgent?: boolean) => void;
+
+  // Notification Batching
+  batchedNotifications: BatchedNotification[];
+  isBatchDigestVisible: boolean;
+  dismissBatchDigest: () => void;
+  clearBatchedNotifications: () => void;
 }
 
 const WellnessContext = createContext<WellnessContextType | undefined>(undefined);
+
+// ==========================================
+// User-Isolated & Daily Ephemeral State Engine
+// ==========================================
+const getTodayDateStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const STANDARD_SCHEDULE = {
+  shiftStart: '09:00 AM',
+  shiftEnd: '06:00 PM',
+  lunchStart: '12:00 PM',
+  lunchEnd: '01:00 PM'
+};
+
+const getUserStorageKey = (email?: string, key: string = '') => {
+  const clean = (email || 'admin_axionhr_com').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  return `axionhr_${clean}_${key}`;
+};
+
+const getAccountInitialState = (email: string, role: UserRole, name?: string) => {
+  const cleanEmail = (email || '').toLowerCase().trim();
+  const today = getTodayDateStr();
+
+  if (cleanEmail === 'admin@axionhr.com' || role === 'admin') {
+    return {
+      workShift: {
+        date: today,
+        isClockedIn: false,
+        clockInTime: null,
+        clockOutTime: null,
+        totalWorkedSeconds: 0,
+        overtimeSeconds: 0,
+        ...STANDARD_SCHEDULE
+      },
+      waterCups: 0,
+      moodLogs: [] as MoodLog[],
+      burnoutMetrics: {
+        overallScore: 0,
+        riskLevel: 'low' as const,
+        meetingHoursWeekly: 0,
+        meetingHoursBenchmark: 15.0,
+        overtimeHoursWeekly: 0,
+        ptoDaysUsed: 0,
+        ptoDaysRemaining: 20,
+        afterHoursActivityCount: 0,
+        consecutiveWorkDays: 0,
+        trend: 'stable' as const,
+        riskFactors: []
+      }
+    };
+  }
+
+  if (cleanEmail === 'hr@axionhr.com' || role === 'hr_manager') {
+    return {
+      workShift: {
+        date: today,
+        isClockedIn: true,
+        clockInTime: '09:00 AM',
+        clockOutTime: null,
+        totalWorkedSeconds: 15120, // 4.2h
+        overtimeSeconds: 0,
+        ...STANDARD_SCHEDULE
+      },
+      waterCups: 4,
+      moodLogs: [
+        {
+          id: 'mood-hr-1',
+          timestamp: 'Today, 09:15 AM',
+          mood: 'good' as const,
+          energyLevel: 4,
+          note: 'Morning HR sync and employee wellness check-ins.',
+          isAnonymousToHr: true,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      burnoutMetrics: {
+        overallScore: 22,
+        riskLevel: 'low' as const,
+        meetingHoursWeekly: 8.5,
+        meetingHoursBenchmark: 15.0,
+        overtimeHoursWeekly: 0,
+        ptoDaysUsed: 1,
+        ptoDaysRemaining: 19,
+        afterHoursActivityCount: 0,
+        consecutiveWorkDays: 3,
+        trend: 'improving' as const,
+        riskFactors: ['Active daily HR interviews']
+      }
+    };
+  }
+
+  if (cleanEmail === 'employee@axionhr.com' || cleanEmail.includes('alex') || role === 'employee') {
+    return {
+      workShift: {
+        date: today,
+        isClockedIn: true,
+        clockInTime: '09:00 AM',
+        clockOutTime: null,
+        totalWorkedSeconds: 18720, // 5.2h
+        overtimeSeconds: 0,
+        ...STANDARD_SCHEDULE
+      },
+      waterCups: 5,
+      moodLogs: [
+        {
+          id: 'mood-emp-1',
+          timestamp: 'Today, 10:30 AM',
+          mood: 'okay' as const,
+          energyLevel: 3,
+          note: 'Working through Sprint backlog and code reviews.',
+          isAnonymousToHr: true,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      burnoutMetrics: {
+        overallScore: 38,
+        riskLevel: 'moderate' as const,
+        meetingHoursWeekly: 14.0,
+        meetingHoursBenchmark: 15.0,
+        overtimeHoursWeekly: 1.5,
+        ptoDaysUsed: 0,
+        ptoDaysRemaining: 20,
+        afterHoursActivityCount: 2,
+        consecutiveWorkDays: 4,
+        trend: 'stable' as const,
+        riskFactors: ['High meeting concentration', 'Sprint deadline approaching']
+      }
+    };
+  }
+
+  return {
+    workShift: {
+      date: today,
+      isClockedIn: false,
+      clockInTime: null,
+      clockOutTime: null,
+      totalWorkedSeconds: 0,
+      overtimeSeconds: 0,
+      ...STANDARD_SCHEDULE
+    },
+    waterCups: 0,
+    moodLogs: [] as MoodLog[],
+    burnoutMetrics: {
+      overallScore: 0,
+      riskLevel: 'low' as const,
+      meetingHoursWeekly: 0,
+      meetingHoursBenchmark: 15.0,
+      overtimeHoursWeekly: 0,
+      ptoDaysUsed: 0,
+      ptoDaysRemaining: 20,
+      afterHoursActivityCount: 0,
+      consecutiveWorkDays: 0,
+      trend: 'stable' as const,
+      riskFactors: []
+    }
+  };
+};
+
+const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
+  const initial = getAccountInitialState(email, role, name);
+  let shift = initial.workShift;
+  let water = initial.waterCups;
+  let moods = initial.moodLogs;
+  let burnout = initial.burnoutMetrics;
+  const today = getTodayDateStr();
+
+  if (typeof window !== 'undefined') {
+    try {
+      const savedShift = localStorage.getItem(getUserStorageKey(email, 'work_shift'));
+      if (savedShift) {
+        const parsed = JSON.parse(savedShift);
+        // Daily Ephemeral Check: If saved shift is from a previous calendar day, reset for today
+        if (parsed.date && parsed.date !== today) {
+          shift = {
+            date: today,
+            isClockedIn: false,
+            clockInTime: null,
+            clockOutTime: null,
+            totalWorkedSeconds: 0,
+            overtimeSeconds: 0,
+            ...STANDARD_SCHEDULE
+          };
+          localStorage.setItem(getUserStorageKey(email, 'work_shift'), JSON.stringify(shift));
+        } else {
+          shift = {
+            ...parsed,
+            date: today,
+            ...STANDARD_SCHEDULE
+          };
+        }
+      }
+
+      // Daily Ephemeral Hydration Check
+      const savedWaterDate = localStorage.getItem(getUserStorageKey(email, 'water_cups_date'));
+      if (savedWaterDate !== today) {
+        water = initial.waterCups;
+        localStorage.setItem(getUserStorageKey(email, 'water_cups_date'), today);
+        localStorage.setItem(getUserStorageKey(email, 'water_cups'), String(water));
+      } else {
+        const savedWater = localStorage.getItem(getUserStorageKey(email, 'water_cups'));
+        if (savedWater !== null) {
+          const parsedW = parseInt(savedWater, 10);
+          if (!isNaN(parsedW)) water = parsedW;
+        }
+      }
+
+      const savedMoods = localStorage.getItem(getUserStorageKey(email, 'mood_logs'));
+      if (savedMoods) moods = JSON.parse(savedMoods);
+
+      const savedBurnout = localStorage.getItem(getUserStorageKey(email, 'burnout_metrics'));
+      if (savedBurnout) burnout = JSON.parse(savedBurnout);
+    } catch (e) {}
+  }
+
+  return { shift, water, moods, burnout };
+};
 
 export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -181,7 +437,9 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => window.removeEventListener('popstate', syncTabFromUrl);
   }, []);
 
-  const [burnoutMetrics, setBurnoutMetrics] = useState<BurnoutMetrics>(initialBurnoutMetrics);
+  const [burnoutMetrics, setBurnoutMetrics] = useState<BurnoutMetrics>(() => {
+    return initialBurnoutMetrics;
+  });
   const [moodLogs, setMoodLogs] = useState<MoodLog[]>(initialMoodLogs);
   const [reminders, setReminders] = useState<WellnessReminder[]>(initialReminders);
   const [activeExercise, setActiveExercise] = useState<'stretch' | 'eye_rest' | 'breathwork' | null>(null);
@@ -190,13 +448,86 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [boundaryConfig, setBoundaryConfig] = useState<BoundaryGuardConfig>(initialBoundaryConfig);
   const [accessibility, setAccessibility] = useState<AccessibilitySettings>(initialAccessibilitySettings);
   const [toastNotification, setToastState] = useState<string | null>(null);
+  const [batchedNotifications, setBatchedNotifications] = useState<BatchedNotification[]>([]);
+  const [isBatchDigestVisible, setIsBatchDigestVisible] = useState(false);
+  const batchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const toastDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setToastNotification = (msg: string | null) => {
-    setToastState(msg);
-    if (msg) {
-      setTimeout(() => setToastState(null), 4000);
+  // Urgency keywords — these toasts always show immediately even when batching is ON
+  const URGENT_KEYWORDS = [
+    'logged out', 'welcome to', 'welcome back', 'clocked in', 'clocked out',
+    'shift timer reset', 'auto-approved', 'password', 'account',
+    'deleted', 'restored', 'purged', 'recovery vault', 'security',
+    'boundary guard', 'focus mode', 'notification batching', 'clutter reduction',
+    'theme changed', 'role', 'status'
+  ];
+
+  const isUrgentMessage = useCallback((msg: string): boolean => {
+    const lower = msg.toLowerCase();
+    return URGENT_KEYWORDS.some(keyword => lower.includes(keyword));
+  }, []);
+
+  const setToastNotification = useCallback((msg: string | null, urgent?: boolean) => {
+    if (!msg) {
+      setToastState(null);
+      return;
     }
-  };
+
+    const shouldBatch = accessibility.batchNotifications && !urgent && !isUrgentMessage(msg);
+
+    if (shouldBatch) {
+      // Queue into batch instead of showing immediately
+      setBatchedNotifications(prev => [
+        ...prev,
+        { id: `bn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, message: msg, timestamp: Date.now() }
+      ]);
+    } else {
+      // Show immediately
+      if (toastDismissTimerRef.current) clearTimeout(toastDismissTimerRef.current);
+      setToastState(msg);
+      toastDismissTimerRef.current = setTimeout(() => setToastState(null), 4000);
+    }
+  }, [accessibility.batchNotifications, isUrgentMessage]);
+
+  // Batch flush timer — delivers digest every 60 seconds when batching is ON and queue is non-empty
+  useEffect(() => {
+    if (accessibility.batchNotifications) {
+      batchTimerRef.current = setInterval(() => {
+        setBatchedNotifications(prev => {
+          if (prev.length > 0) {
+            setIsBatchDigestVisible(true);
+            // Auto-dismiss the digest after 10 seconds
+            setTimeout(() => setIsBatchDigestVisible(false), 10000);
+          }
+          return prev;
+        });
+      }, 60000);
+    } else {
+      // When batching is turned OFF, immediately flush any queued notifications as a digest
+      if (batchTimerRef.current) clearInterval(batchTimerRef.current);
+      batchTimerRef.current = null;
+      setBatchedNotifications(prev => {
+        if (prev.length > 0) {
+          setIsBatchDigestVisible(true);
+          setTimeout(() => setIsBatchDigestVisible(false), 10000);
+        }
+        return prev;
+      });
+    }
+    return () => {
+      if (batchTimerRef.current) clearInterval(batchTimerRef.current);
+    };
+  }, [accessibility.batchNotifications]);
+
+  const dismissBatchDigest = useCallback(() => {
+    setIsBatchDigestVisible(false);
+    setBatchedNotifications([]);
+  }, []);
+
+  const clearBatchedNotifications = useCallback(() => {
+    setBatchedNotifications([]);
+    setIsBatchDigestVisible(false);
+  }, []);
 
   const [accounts, setAccounts] = useState<UserAccount[]>(initialUserAccounts);
   const [deletedAccounts, setDeletedAccounts] = useState<DeletedUserAccount[]>(initialDeletedAccounts);
@@ -219,6 +550,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const parsedProfile = JSON.parse(savedProfileStr);
             if (parsedProfile && typeof parsedProfile === 'object') {
               setUserProfile(parsedProfile);
+              const personal = loadPersonalUserData(parsedProfile.email, parsedProfile.role || savedRole, parsedProfile.name);
+              setWorkShift(personal.shift);
+              setWaterCups(personal.water);
+              setMoodLogs(personal.moods);
+              setBurnoutMetrics(personal.burnout);
             }
           }
         }
@@ -270,7 +606,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const resBadges = await fetch('/api/badges');
         if (resBadges.ok) {
           const badgeData = await resBadges.json();
-          if (badgeData.badges && Array.isArray(badgeData.badges) && badgeData.badges.length > 0) {
+          if (badgeData.badges && Array.isArray(badgeData.badges)) {
             setBadges(badgeData.badges);
           }
         }
@@ -298,6 +634,32 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       } catch (e) {}
 
+      // Fetch PTO requests from persistent server API
+      try {
+        const resPto = await fetch('/api/pto');
+        if (resPto.ok) {
+          const ptoData = await resPto.json();
+          if (ptoData.ptoRequests && Array.isArray(ptoData.ptoRequests)) {
+            const cleaned = ptoData.ptoRequests.filter((p: any) => p.id !== 'pto-2' && p.id !== 'pto-1' && p.userName !== 'Elena Rostova');
+            setPtoRequests(cleaned);
+            try {
+              localStorage.setItem('axionhr_pto_requests', JSON.stringify(cleaned));
+            } catch (e) {}
+          }
+        }
+      } catch (e) {}
+
+      // Fetch Work Shifts & Attendance logs from persistent server API
+      try {
+        const resShifts = await fetch('/api/shifts');
+        if (resShifts.ok) {
+          const shiftData = await resShifts.json();
+          if (shiftData.shifts && Array.isArray(shiftData.shifts)) {
+            setTeamShifts(shiftData.shifts);
+          }
+        }
+      } catch (e) {}
+
       // Load moods, notifications, badges, and metrics from localStorage
       try {
         const savedMoods = localStorage.getItem('axionhr_mood_logs');
@@ -309,13 +671,28 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const savedHrNotifs = localStorage.getItem('axionhr_hr_notifications');
         if (savedHrNotifs) {
           const parsed = JSON.parse(savedHrNotifs);
-          if (Array.isArray(parsed)) setHrNotifications(parsed);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter(n => n.id !== 'hr-notif-1' && n.id !== 'hr-notif-2');
+            setHrNotifications(cleaned);
+          }
         }
 
         const savedBadges = localStorage.getItem('axionhr_badges');
         if (savedBadges) {
           const parsed = JSON.parse(savedBadges);
-          if (Array.isArray(parsed)) setBadges(parsed);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed
+              .filter(b => b.id !== 'b1' && b.id !== 'b2' && b.id !== 'b3')
+              .map(b => ({
+                ...b,
+                senderName: (b.senderName || '').replace(/\s*\(You\)/gi, '').trim(),
+                recipientName: (b.recipientName || '').replace(/\s*\(You\)/gi, '').trim()
+              }));
+            setBadges(cleaned);
+            try {
+              localStorage.setItem('axionhr_badges', JSON.stringify(cleaned));
+            } catch (e) {}
+          }
         }
 
         const savedReminders = localStorage.getItem('axionhr_reminders');
@@ -324,10 +701,27 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (Array.isArray(parsed) && parsed.length > 0) setReminders(parsed);
         }
 
+        const savedTheme = localStorage.getItem('axionhr_theme');
+        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')) {
+          setThemeState(savedTheme as ThemeMode);
+        }
+
+        const savedWater = localStorage.getItem('axionhr_water_cups');
+        if (savedWater !== null) {
+          const parsedW = parseInt(savedWater, 10);
+          if (!isNaN(parsedW)) setWaterCups(parsedW);
+        }
+
         const savedMetrics = localStorage.getItem('axionhr_burnout_metrics');
         if (savedMetrics) {
           const parsed = JSON.parse(savedMetrics);
-          if (parsed && typeof parsed === 'object') setBurnoutMetrics(parsed);
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.overallScore === 68 && parsed.consecutiveWorkDays === 9) {
+              setBurnoutMetrics(initialBurnoutMetrics);
+            } else {
+              setBurnoutMetrics(parsed);
+            }
+          }
         }
       } catch (err) {
         console.warn('Notice: Error loading persisted wellness state:', err);
@@ -440,6 +834,51 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             severity: n.severity || 'medium'
           })));
         }
+
+        const { data: shiftsData } = await supabase
+          .from('work_shifts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (shiftsData && shiftsData.length > 0) {
+          setTeamShifts(shiftsData.map((s: any) => ({
+            id: s.id,
+            userId: s.user_id || 'user-default',
+            userName: s.user_name || 'Team Member',
+            userAvatar: s.user_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            department: s.department || 'General',
+            date: s.date || new Date().toISOString().split('T')[0],
+            clockInTime: s.clock_in_time,
+            clockOutTime: s.clock_out_time || null,
+            totalWorkedSeconds: parseInt(s.total_worked_seconds, 10) || 0,
+            overtimeSeconds: parseInt(s.overtime_seconds, 10) || 0,
+            status: s.status || (s.clock_out_time ? 'completed' : 'active'),
+            createdAt: s.created_at || new Date().toISOString()
+          })));
+        }
+
+        const { data: ptoData } = await supabase
+          .from('pto_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (ptoData && ptoData.length > 0) {
+          setPtoRequests(ptoData.map((p: any) => ({
+            id: p.id,
+            userId: p.user_id || 'user-default',
+            userName: p.user_name || 'Team Member',
+            userAvatar: p.user_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            department: p.department || 'General',
+            category: p.category || 'general_pto',
+            startDate: p.start_date,
+            endDate: p.end_date,
+            totalDays: Number(p.total_days) || 1,
+            reason: p.reason || '',
+            status: p.status || 'pending',
+            autoApproved: Boolean(p.auto_approved),
+            reviewedBy: p.reviewed_by || undefined,
+            reviewedAt: p.reviewed_at || undefined,
+            createdAt: p.created_at || new Date().toISOString()
+          })));
+        }
       } catch (err) {
         console.warn('Supabase data sync notice:', err);
       }
@@ -465,7 +904,30 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         fetch('/api/badges')
           .then(r => r.json())
           .then(data => {
-            if (data.badges && Array.isArray(data.badges)) setBadges(data.badges);
+            if (data.badges && Array.isArray(data.badges)) {
+              const cleanedBadges: PeerBadge[] = data.badges.map((b: PeerBadge) => ({
+                ...b,
+                senderName: (b.senderName || '').replace(/\s*\(You\)/gi, '').trim(),
+                recipientName: (b.recipientName || '').replace(/\s*\(You\)/gi, '').trim()
+              }));
+              setBadges(prev => {
+                const prevIds = new Set(prev.map(b => b.id));
+                const newBadges = cleanedBadges.filter((b: PeerBadge) => !prevIds.has(b.id));
+                const currentUserMention = newBadges.find((b: PeerBadge) => {
+                  const r = (b.recipientName || '').toLowerCase();
+                  const un = (userProfile.name || '').toLowerCase();
+                  const ue = (userProfile.email || '').toLowerCase();
+                  return (un && (r === un || r.includes(un))) || (ue && r === ue);
+                });
+                if (currentUserMention) {
+                  setToastNotification(
+                    `🌟 ${currentUserMention.senderName} sent you an Appreciation Badge: "${currentUserMention.message}"`,
+                    true
+                  );
+                }
+                return cleanedBadges;
+              });
+            }
           })
           .catch(() => {});
       })
@@ -474,6 +936,22 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .then(r => r.json())
           .then(data => {
             if (data.moodLogs && Array.isArray(data.moodLogs)) setMoodLogs(data.moodLogs);
+          })
+          .catch(() => {});
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_shifts' }, () => {
+        fetch('/api/shifts')
+          .then(r => r.json())
+          .then(data => {
+            if (data.shifts && Array.isArray(data.shifts)) setTeamShifts(data.shifts);
+          })
+          .catch(() => {});
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pto_requests' }, () => {
+        fetch('/api/pto')
+          .then(r => r.json())
+          .then(data => {
+            if (data.ptoRequests && Array.isArray(data.ptoRequests)) setPtoRequests(data.ptoRequests);
           })
           .catch(() => {});
       })
@@ -565,6 +1043,14 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
+    // Load user-isolated shift, hydration, mood logs, and burnout metrics
+    const userEmail = updatedProfile.email || 'admin@axionhr.com';
+    const personal = loadPersonalUserData(userEmail, updatedProfile.role, updatedProfile.name);
+    setWorkShift(personal.shift);
+    setWaterCups(personal.water);
+    setMoodLogs(personal.moods);
+    setBurnoutMetrics(personal.burnout);
+
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('axionhr_is_auth', 'true');
@@ -627,7 +1113,17 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: new Date().toISOString()
     };
 
-    setMoodLogs(prev => [newLog, ...prev]);
+    setMoodLogs(prev => {
+      const updated = [newLog, ...prev];
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'mood_logs'), JSON.stringify(updated));
+          }
+        } catch (e) {}
+      }
+      return updated;
+    });
     setToastNotification('Mood check-in logged and saved to the database! Thank you for sharing.');
 
     let scoreChange = 0;
@@ -640,13 +1136,21 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBurnoutMetrics(prev => {
       const newScore = Math.min(100, Math.max(0, prev.overallScore + scoreChange));
       const newLevel = getBurnoutRiskLevel(newScore);
-      const newTrend = scoreChange < 0 ? 'improving' : scoreChange > 0 ? 'worsening' : 'stable';
-      return {
+      const newTrend: 'improving' | 'worsening' | 'stable' = scoreChange < 0 ? 'improving' : scoreChange > 0 ? 'worsening' : 'stable';
+      const updated: BurnoutMetrics = {
         ...prev,
         overallScore: newScore,
         riskLevel: newLevel,
         trend: newTrend
       };
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'burnout_metrics'), JSON.stringify(updated));
+          }
+        } catch (e) {}
+      }
+      return updated;
     });
 
     // Persist to server API & Supabase database
@@ -761,9 +1265,9 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const newBadge: PeerBadge = {
       id: `badge-${Date.now()}`,
-      senderName: userProfile.name ? `${userProfile.name} (You)` : 'Colleague',
+      senderName: (userProfile.name || 'Colleague').replace(/\s*\(You\)/gi, '').trim(),
       senderAvatar: userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      recipientName: matchedRecipient?.name || recipientName.trim(),
+      recipientName: (matchedRecipient?.name || recipientName).replace(/\s*\(You\)/gi, '').trim(),
       recipientAvatar,
       badgeType,
       message: message.trim(),
@@ -1049,7 +1553,17 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
-  const [theme, setThemeState] = useState<ThemeMode>('light');
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('axionhr_theme');
+        if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) {
+          return saved as ThemeMode;
+        }
+      } catch (e) {}
+    }
+    return 'light';
+  });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   // Sync theme with system and HTML document element
@@ -1094,6 +1608,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
     setUserProfile(prev => ({ ...prev, theme: newTheme }));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('axionhr_theme', newTheme);
+      } catch (e) {}
+    }
     setToastNotification(`Theme changed to ${newTheme === 'dark' ? 'Dark Mode 🌙' : newTheme === 'light' ? 'Light Mode ☀️' : 'System Default 💻'}`);
   };
 
@@ -1144,6 +1663,30 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         return nextAccounts;
       });
+
+      // Synchronize current user avatar across existing peer badges
+      if (updates.avatarUrl) {
+        setBadges(prevBadges => {
+          const nextBadges = prevBadges.map(b => {
+            const isSender = b.senderName.includes('(You)') || (prev.name && b.senderName.toLowerCase().includes(prev.name.toLowerCase()));
+            const isRecipient = b.recipientName.includes('(You)') || (prev.name && b.recipientName.toLowerCase().includes(prev.name.toLowerCase()));
+            if (isSender || isRecipient) {
+              return {
+                ...b,
+                senderAvatar: isSender ? updates.avatarUrl! : b.senderAvatar,
+                recipientAvatar: isRecipient ? updates.avatarUrl! : b.recipientAvatar
+              };
+            }
+            return b;
+          });
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('axionhr_badges', JSON.stringify(nextBadges));
+            } catch (e) {}
+          }
+          return nextBadges;
+        });
+      }
 
       return updated;
     });
@@ -1299,27 +1842,482 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setToastNotification('Pomodoro focus overlay closed.');
   };
 
-  // Hydration state (defaults to 6/10 cups)
-  const [waterCups, setWaterCups] = useState<number>(6);
+  // Hydration state (defaults to 0 cups baseline to start)
+  const [waterCups, setWaterCups] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('axionhr_water_cups');
+        if (saved !== null) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed)) return parsed;
+        }
+      } catch (e) {}
+    }
+    return 0; // Clean 0 cups baseline to start
+  });
 
   const logWaterCup = () => {
     setWaterCups(prev => {
       const next = prev >= 10 ? 10 : prev + 1;
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'water_cups'), String(next));
+          }
+          localStorage.setItem('axionhr_water_cups', String(next));
+        } catch (e) {}
+      }
       setToastNotification(`💧 Hydration logged! ${next}/10 cups completed for today.`);
       return next;
     });
   };
 
   const removeWaterCup = () => {
-    setWaterCups(prev => (prev > 0 ? prev - 1 : 0));
+    setWaterCups(prev => {
+      const next = prev > 0 ? prev - 1 : 0;
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'water_cups'), String(next));
+          }
+          localStorage.setItem('axionhr_water_cups', String(next));
+        } catch (e) {}
+      }
+      return next;
+    });
   };
 
   const resetWaterCups = () => {
     setWaterCups(0);
+    if (typeof window !== 'undefined') {
+      try {
+        if (userProfile.email) {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'water_cups'), '0');
+        }
+        localStorage.setItem('axionhr_water_cups', '0');
+      } catch (e) {}
+    }
     setToastNotification('Hydration tracker reset to 0 cups.');
   };
 
+  // Work Shift & Attendance State
+  const [workShift, setWorkShift] = useState<WorkShiftState>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('axionhr_work_shift');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch (e) {}
+    }
+    return {
+      isClockedIn: false,
+      clockInTime: null,
+      clockOutTime: null,
+      totalWorkedSeconds: 0,
+      overtimeSeconds: 0
+    };
+  });
+
+  // Live work shift timer when clocked in
+  useEffect(() => {
+    if (!workShift.isClockedIn) return;
+
+    const timer = setInterval(() => {
+      setWorkShift((prev: WorkShiftState) => {
+        if (!prev.isClockedIn) return prev;
+        const nextSeconds = prev.totalWorkedSeconds + 1;
+        const nextOvertime = Math.max(0, nextSeconds - 28800); // 8 hours standard (28800s)
+        const updated: WorkShiftState = {
+          ...prev,
+          totalWorkedSeconds: nextSeconds,
+          overtimeSeconds: nextOvertime
+        };
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(updated));
+          }
+          localStorage.setItem('axionhr_work_shift', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [workShift.isClockedIn, userProfile.email]);
+
+  const toggleClockInOut = () => {
+    const isCurrentlyClockedIn = workShift.isClockedIn;
+    const willBeClockedIn = !isCurrentlyClockedIn;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (willBeClockedIn) {
+      const nextState: WorkShiftState = {
+        date: getTodayDateStr(),
+        isClockedIn: true,
+        clockInTime: timeStr,
+        clockOutTime: null,
+        totalWorkedSeconds: workShift.totalWorkedSeconds > 0 ? workShift.totalWorkedSeconds : 0,
+        overtimeSeconds: workShift.overtimeSeconds > 0 ? workShift.overtimeSeconds : 0,
+        ...STANDARD_SCHEDULE
+      };
+      setWorkShift(nextState);
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(nextState));
+          }
+          localStorage.setItem('axionhr_work_shift', JSON.stringify(nextState));
+        } catch (e) {}
+      }
+
+      const newShiftRecord: WorkShiftRecord = {
+        id: `shift-${Date.now()}`,
+        userId: userProfile.id || 'user-default',
+        userName: userProfile.name || 'System Administrator',
+        userAvatar: userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        department: userProfile.department || 'Executive IT',
+        date: getTodayDateStr(),
+        clockInTime: timeStr,
+        clockOutTime: null,
+        totalWorkedSeconds: 0,
+        overtimeSeconds: 0,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+
+      setTeamShifts(shifts => [newShiftRecord, ...shifts.filter(s => !(s.userId === newShiftRecord.userId && s.status === 'active'))]);
+
+      fetch('/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clock_in', shift: newShiftRecord })
+      }).then(async res => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shifts && Array.isArray(data.shifts)) {
+            setTeamShifts(data.shifts);
+          }
+        }
+      }).catch(e => console.warn('Shift sync notice:', e));
+
+      setToastNotification(`🟢 Clocked in at ${timeStr}. Standard shift: 9:00 AM – 6:00 PM (1h Lunch at 12:00 PM). Have a productive day!`);
+    } else {
+      const workedHours = (workShift.totalWorkedSeconds / 3600).toFixed(1);
+      const overtimeHours = (workShift.overtimeSeconds / 3600).toFixed(1);
+      const nextState: WorkShiftState = {
+        ...workShift,
+        date: getTodayDateStr(),
+        isClockedIn: false,
+        clockOutTime: timeStr,
+        ...STANDARD_SCHEDULE
+      };
+      setWorkShift(nextState);
+      if (typeof window !== 'undefined') {
+        try {
+          if (userProfile.email) {
+            localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(nextState));
+          }
+          localStorage.setItem('axionhr_work_shift', JSON.stringify(nextState));
+        } catch (e) {}
+      }
+
+      if (workShift.overtimeSeconds > 0) {
+        const addedOt = parseFloat(overtimeHours);
+        setBurnoutMetrics(bm => {
+          const updated: BurnoutMetrics = {
+            ...bm,
+            overtimeHoursWeekly: parseFloat((bm.overtimeHoursWeekly + addedOt).toFixed(1))
+          };
+          if (typeof window !== 'undefined' && userProfile.email) {
+            try {
+              localStorage.setItem(getUserStorageKey(userProfile.email, 'burnout_metrics'), JSON.stringify(updated));
+            } catch (e) {}
+          }
+          return updated;
+        });
+      }
+
+      setTeamShifts(shifts => shifts.map(s => {
+        if (s.userId === (userProfile.id || 'user-default') && s.status === 'active') {
+          return {
+            ...s,
+            clockOutTime: timeStr,
+            totalWorkedSeconds: workShift.totalWorkedSeconds,
+            overtimeSeconds: workShift.overtimeSeconds,
+            status: 'completed'
+          };
+        }
+        return s;
+      }));
+
+      fetch('/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'clock_out',
+          userId: userProfile.id || 'user-default',
+          userName: userProfile.name || 'System Administrator',
+          userAvatar: userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          department: userProfile.department || 'Executive IT',
+          clockInTime: workShift.clockInTime || timeStr,
+          clockOutTime: timeStr,
+          totalWorkedSeconds: workShift.totalWorkedSeconds,
+          overtimeSeconds: workShift.overtimeSeconds
+        })
+      }).then(async res => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shifts && Array.isArray(data.shifts)) {
+            setTeamShifts(data.shifts);
+          }
+        }
+      }).catch(e => console.warn('Shift sync notice:', e));
+
+      setToastNotification(
+        `⏹️ Clocked out at ${timeStr} (${workedHours}h logged${parseFloat(overtimeHours) > 0 ? `, +${overtimeHours}h Overtime` : ''}). Rest well!`
+      );
+    }
+  };
+
+  const resetWorkShift = () => {
+    const clearedState: WorkShiftState = {
+      date: getTodayDateStr(),
+      isClockedIn: false,
+      clockInTime: null,
+      clockOutTime: null,
+      totalWorkedSeconds: 0,
+      overtimeSeconds: 0,
+      ...STANDARD_SCHEDULE
+    };
+    setWorkShift(clearedState);
+    if (typeof window !== 'undefined') {
+      try {
+        if (userProfile.email) {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(clearedState));
+        }
+        localStorage.setItem('axionhr_work_shift', JSON.stringify(clearedState));
+      } catch (e) {}
+    }
+    setToastNotification('⏱️ Workday shift timer reset to 00:00:00.');
+  };
+
+  const [teamShifts, setTeamShifts] = useState<WorkShiftRecord[]>([]);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState<boolean>(false);
+
+  // PTO & Time-Off State
+  const [ptoRequests, setPtoRequests] = useState<PtoRequest[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('axionhr_pto_requests');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter(p => p.id !== 'pto-2' && p.id !== 'pto-1' && p.userName !== 'Elena Rostova');
+            return cleaned;
+          }
+        }
+      } catch (e) {}
+    }
+    return initialPtoRequests;
+  });
+
+  const [ptoBalance, setPtoBalance] = useState<PtoBalance>(() => {
+    return initialPtoBalance;
+  });
+
+  // Auto-calculate live accurate PTO balance from real ptoRequests for the current user
+  useEffect(() => {
+    const userReqs = ptoRequests.filter(
+      p => p.userId === userProfile.id || (userProfile.name && p.userName.toLowerCase() === userProfile.name.toLowerCase()) || !p.userId
+    );
+    const used = userReqs
+      .filter(p => p.status === 'approved')
+      .reduce((sum, p) => sum + (p.totalDays || 1), 0);
+
+    const pending = userReqs
+      .filter(p => p.status === 'pending')
+      .reduce((sum, p) => sum + (p.totalDays || 1), 0);
+
+    const total = 20; // Standard 20 days annual wellness/PTO allowance
+    const remaining = Math.max(0, total - used);
+
+    const calculatedBalance: PtoBalance = {
+      totalAllowance: total,
+      usedDays: used,
+      pendingDays: pending,
+      remainingDays: remaining
+    };
+
+    setPtoBalance(calculatedBalance);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('axionhr_pto_balance', JSON.stringify(calculatedBalance));
+      } catch (e) {}
+    }
+  }, [ptoRequests, userProfile.id, userProfile.name]);
+
+  const [isPtoModalOpen, setIsPtoModalOpen] = useState<boolean>(false);
+
+  const submitPtoRequest = (data: { category: LeaveCategory; startDate: string; endDate: string; totalDays: number; reason?: string }) => {
+    const isAutoApproved = (data.category === 'mental_health' && data.totalDays <= 1) || data.category === 'birthday';
+    const newRequest: PtoRequest = {
+      id: `pto-${Date.now()}`,
+      userId: userProfile.id || 'user-default',
+      userName: userProfile.name || 'System Administrator',
+      userAvatar: userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      department: userProfile.department || 'Executive IT',
+      category: data.category,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      totalDays: data.totalDays,
+      reason: data.reason,
+      status: isAutoApproved ? 'approved' : 'pending',
+      autoApproved: isAutoApproved,
+      reviewedBy: isAutoApproved ? 'AI Wellness Guard (Auto-Approved)' : undefined,
+      reviewedAt: isAutoApproved ? new Date().toISOString().split('T')[0] : undefined,
+      createdAt: new Date().toISOString()
+    };
+
+    setPtoRequests(prev => {
+      const updated = [newRequest, ...prev];
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('axionhr_pto_requests', JSON.stringify(updated)); } catch (e) {}
+      }
+      return updated;
+    });
+
+    setPtoBalance(prev => {
+      const nextBalance: PtoBalance = {
+        ...prev,
+        usedDays: isAutoApproved ? prev.usedDays + data.totalDays : prev.usedDays,
+        pendingDays: isAutoApproved ? prev.pendingDays : prev.pendingDays + data.totalDays,
+        remainingDays: isAutoApproved ? Math.max(0, prev.remainingDays - data.totalDays) : prev.remainingDays
+      };
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('axionhr_pto_balance', JSON.stringify(nextBalance)); } catch (e) {}
+      }
+      return nextBalance;
+    });
+
+    if (isAutoApproved) {
+      const scoreDrop = Math.min(25, Math.round(data.totalDays * 15));
+      setBurnoutMetrics(bm => ({
+        ...bm,
+        overallScore: Math.max(15, bm.overallScore - scoreDrop),
+        ptoDaysUsed: bm.ptoDaysUsed + data.totalDays,
+        ptoDaysRemaining: Math.max(0, bm.ptoDaysRemaining - data.totalDays),
+        consecutiveWorkDays: Math.max(0, bm.consecutiveWorkDays - 2)
+      }));
+      setToastNotification(`🧘 Rest Day Auto-Approved! Burnout risk improved by -${scoreDrop} points. Have a refreshing recharge!`);
+    } else {
+      setToastNotification(`🏖️ Time-off request for ${data.totalDays} day(s) submitted for manager review.`);
+    }
+
+    fetch('/api/pto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', ptoRequest: newRequest })
+    }).catch(err => console.warn('PTO sync notice:', err));
+  };
+
+  const reviewPtoRequest = (requestId: string, status: 'approved' | 'rejected') => {
+    let targetReq: PtoRequest | undefined;
+    setPtoRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.id === requestId) {
+          targetReq = r;
+          return {
+            ...r,
+            status,
+            reviewedBy: `HR Executive (${userProfile.name})`,
+            reviewedAt: new Date().toISOString().split('T')[0]
+          };
+        }
+        return r;
+      });
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('axionhr_pto_requests', JSON.stringify(updated)); } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (targetReq && status === 'approved' && targetReq.status === 'pending') {
+      const days = targetReq.totalDays;
+      setPtoBalance(prev => {
+        const next: PtoBalance = {
+          ...prev,
+          usedDays: prev.usedDays + days,
+          pendingDays: Math.max(0, prev.pendingDays - days),
+          remainingDays: Math.max(0, prev.remainingDays - days)
+        };
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('axionhr_pto_balance', JSON.stringify(next)); } catch (e) {}
+        }
+        return next;
+      });
+      setToastNotification(`✅ Approved time-off for ${targetReq.userName} (${days} day(s)).`);
+    } else if (targetReq && status === 'rejected') {
+      setPtoBalance(prev => {
+        const next: PtoBalance = {
+          ...prev,
+          pendingDays: Math.max(0, prev.pendingDays - targetReq!.totalDays)
+        };
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('axionhr_pto_balance', JSON.stringify(next)); } catch (e) {}
+        }
+        return next;
+      });
+      setToastNotification(`Declined time-off request for ${targetReq.userName}.`);
+    }
+
+    fetch('/api/pto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'review', requestId, status, reviewedBy: userProfile.name })
+    }).catch(err => console.warn('PTO review notice:', err));
+  };
+
+  const cancelPtoRequest = (requestId: string) => {
+    let targetReq: PtoRequest | undefined;
+    setPtoRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.id === requestId) {
+          targetReq = r;
+          return { ...r, status: 'cancelled' as const };
+        }
+        return r;
+      });
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('axionhr_pto_requests', JSON.stringify(updated)); } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (targetReq) {
+      if (targetReq.status === 'pending') {
+        setPtoBalance(prev => ({ ...prev, pendingDays: Math.max(0, prev.pendingDays - targetReq!.totalDays) }));
+      } else if (targetReq.status === 'approved') {
+        setPtoBalance(prev => ({
+          ...prev,
+          usedDays: Math.max(0, prev.usedDays - targetReq!.totalDays),
+          remainingDays: prev.remainingDays + targetReq!.totalDays
+        }));
+      }
+      setToastNotification(`Time-off request cancelled.`);
+    }
+
+    fetch('/api/pto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel', requestId })
+    }).catch(err => console.warn('PTO cancel notice:', err));
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   const toggleSidebar = (open?: boolean) => {
     setIsSidebarOpen(prev => (open !== undefined ? open : !prev));
@@ -1334,11 +2332,17 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         login,
         logout,
         activeTab,
+        isNavigating,
         setActiveTab: (tab: NavTab) => {
+          if (tab === activeTab) return;
+          setIsNavigating(true);
           setActiveTab(tab);
           if (typeof window !== 'undefined' && window.innerWidth < 768) {
             setIsSidebarOpen(false); // Only auto-close drawer on mobile
           }
+          setTimeout(() => {
+            setIsNavigating(false);
+          }, 180);
         },
         userRole,
         setUserRole,
@@ -1364,6 +2368,19 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         logWaterCup,
         removeWaterCup,
         resetWaterCups,
+        workShift,
+        toggleClockInOut,
+        resetWorkShift,
+        teamShifts,
+        isAttendanceModalOpen,
+        setIsAttendanceModalOpen,
+        ptoRequests,
+        ptoBalance,
+        isPtoModalOpen,
+        setIsPtoModalOpen,
+        submitPtoRequest,
+        reviewPtoRequest,
+        cancelPtoRequest,
         accounts,
         deletedAccounts,
         createAccount,
@@ -1404,7 +2421,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSidebarOpen,
         toggleSidebar,
         toastNotification,
-        setToastNotification
+        setToastNotification,
+        batchedNotifications,
+        isBatchDigestVisible,
+        dismissBatchDigest,
+        clearBatchedNotifications
       }}
     >
       {children}

@@ -14,7 +14,7 @@ import {
   Users, 
   UserCog, 
   LogOut,
-  Settings
+  Palmtree
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -32,27 +32,56 @@ export const Sidebar: React.FC = () => {
 
   const hrBadge = unreadHrNotificationCount > 0 ? `${unreadHrNotificationCount} Alerts` : 'HR';
 
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode; badge?: string }[] = 
+  const navSections: { title?: string; items: { id: NavTab; label: string; icon: React.ReactNode; badge?: string }[] }[] = 
     userRole === 'admin'
       ? [
-          { id: 'accounts', label: 'Account Management', icon: <UserCog className="w-5 h-5" />, badge: 'Admin' },
-          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
-          { id: 'settings', label: 'Settings & Profile', icon: <Settings className="w-5 h-5" /> }
+          {
+            title: 'System Administration',
+            items: [
+              { id: 'accounts', label: 'Account Management', icon: <UserCog className="w-5 h-5" />, badge: 'Admin' },
+              { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
+              { id: 'pto', label: 'PTO & Time-Off Hub', icon: <Palmtree className="w-5 h-5" /> }
+            ]
+          }
         ]
       : userRole === 'hr_manager' 
       ? [
-          { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
-          { id: 'settings', label: 'Settings & Profile', icon: <Settings className="w-5 h-5" /> }
+          {
+            title: 'HR Management Portal',
+            items: [
+              { id: 'hr', label: 'HR Executive View', icon: <Users className="w-5 h-5" />, badge: hrBadge },
+              { id: 'pto', label: 'PTO & Time-Off Hub', icon: <Palmtree className="w-5 h-5" /> }
+            ]
+          }
         ]
       : [
-          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-          { id: 'analytics', label: 'AI Burnout Predictor', icon: <Activity className="w-5 h-5" />, badge: 'AI' },
-          { id: 'physical', label: 'Physical Health', icon: <Heart className="w-5 h-5" /> },
-          { id: 'mental', label: 'Mental & AI Coach', icon: <BrainCircuit className="w-5 h-5" /> },
-          { id: 'social', label: 'Appreciations', icon: <Award className="w-5 h-5" /> },
-          { id: 'inclusive', label: 'Adaptive Focus Mode', icon: <Sliders className="w-5 h-5" /> },
-          { id: 'boundary', label: 'Boundary Guard', icon: <ShieldCheck className="w-5 h-5" /> },
-          { id: 'settings', label: 'Settings & Profile', icon: <Settings className="w-5 h-5" /> },
+          {
+            title: 'Overview',
+            items: [
+              { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> }
+            ]
+          },
+          {
+            title: 'Six Wellness Pillars',
+            items: [
+              { id: 'analytics', label: 'AI Burnout Predictor', icon: <Activity className="w-5 h-5" />, badge: 'AI' },
+              { id: 'physical', label: 'Physical Health', icon: <Heart className="w-5 h-5" /> },
+              { id: 'mental', label: 'Mental & AI Coach', icon: <BrainCircuit className="w-5 h-5" /> },
+              { id: 'social', label: 'Appreciations', icon: <Award className="w-5 h-5" /> },
+              { id: 'inclusive', label: 'Adaptive Focus Mode', icon: <Sliders className="w-5 h-5" /> },
+              { id: 'boundary', label: 'Boundary Guard', icon: <ShieldCheck className="w-5 h-5" /> }
+            ]
+          },
+          {
+            title: 'Time-Off & Leave',
+            items: [
+              { 
+                id: 'pto', 
+                label: 'PTO & Rest Hub', 
+                icon: <Palmtree className="w-5 h-5" />
+              }
+            ]
+          }
         ];
 
   return (
@@ -81,7 +110,7 @@ export const Sidebar: React.FC = () => {
           }
         `}
       >
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-3 overflow-y-auto pr-0.5 custom-scrollbar">
           {/* Brand Logo Header (Acts as Sidebar Expander & Minimizer) */}
           {isSidebarOpen ? (
             /* Full-Width Header */
@@ -130,87 +159,94 @@ export const Sidebar: React.FC = () => {
           {/* Section Divider */}
           <div className={`h-px mx-1 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200/80'}`} />
 
-          {/* Navigation Section */}
-          <div className="space-y-1.5">
-            {isSidebarOpen && (
-              <p className={`px-3 text-xs font-medium uppercase tracking-wider mb-2 ${
-                isDarkMode ? 'text-slate-500' : 'text-slate-400'
-              }`}>
-                {userRole === 'admin' ? 'System Administration' : userRole === 'hr_manager' ? 'HR Management Portal' : 'Overview'}
-              </p>
-            )}
+          {/* Navigation Sections */}
+          <div className="space-y-3">
+            {navSections.map((section, sIdx) => (
+              <div key={sIdx} className="space-y-1">
+                {sIdx > 0 && (
+                  <div className={`h-px my-2 mx-1.5 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-200/60'}`} />
+                )}
+                {isSidebarOpen && section.title && (
+                  <p className={`px-3 text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                    isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                  }`}>
+                    {section.title}
+                  </p>
+                )}
 
-            {navItems.map(item => {
-              const isActive = activeTab === item.id;
-              
-              if (!isSidebarOpen) {
-                /* Mini Sidenav Icon-Only Button */
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center relative group transition-all cursor-pointer ${
-                      isActive
-                        ? isDarkMode ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 shadow-sm border border-slate-200/90'
-                        : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/70' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-                    }`}
-                  >
-                    <span className={isActive ? (isDarkMode ? 'text-white' : 'text-blue-600') : (isDarkMode ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-800')}>
-                      {item.icon}
-                    </span>
+                {section.items.map(item => {
+                  const isActive = activeTab === item.id;
+                  
+                  if (!isSidebarOpen) {
+                    /* Mini Sidenav Icon-Only Button */
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center relative group transition-all cursor-pointer ${
+                          isActive
+                            ? isDarkMode ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 shadow-sm border border-slate-200/90'
+                            : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/70' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                        }`}
+                      >
+                        <span className={isActive ? (isDarkMode ? 'text-white' : 'text-blue-600') : (isDarkMode ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-800')}>
+                          {item.icon}
+                        </span>
 
-                    {/* Active Indicator Dot */}
-                    {isActive && (
-                      <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isDarkMode ? 'bg-white' : 'bg-blue-600'}`} />
-                    )}
+                        {/* Active Indicator Dot */}
+                        {isActive && (
+                          <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isDarkMode ? 'bg-white' : 'bg-blue-600'}`} />
+                        )}
 
-                    {/* Badge Dot for Alerts in Mini Mode */}
-                    {item.badge && !isActive && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-slate-900" />
-                    )}
+                        {/* Badge Dot for Alerts in Mini Mode */}
+                        {item.badge && !isActive && (
+                          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-slate-900" />
+                        )}
 
-                    {/* Hover Floating Tooltip */}
-                    <div className="absolute left-full ml-3.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-                      <span>{item.label}</span>
+                        {/* Hover Floating Tooltip */}
+                        <div className="absolute left-full ml-3.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+                          <span>{item.label}</span>
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-[10px] font-bold">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  /* Full-Width Nav Button */
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[14px] font-normal transition-all cursor-pointer ${
+                        isActive
+                          ? isDarkMode ? 'bg-blue-600 text-white font-medium shadow-md' : 'bg-white text-blue-600 font-medium shadow-xs border border-slate-200/80'
+                          : isDarkMode ? 'text-[#d1d5db] hover:text-white hover:bg-[#252833]' : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={isActive ? (isDarkMode ? 'text-white' : 'text-blue-600') : (isDarkMode ? 'text-slate-400' : 'text-slate-400')}>
+                          {item.icon}
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-[10px] font-bold">
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                          isActive
+                            ? isDarkMode ? 'bg-white text-blue-900 font-bold' : 'bg-blue-600 text-white'
+                            : isDarkMode ? 'bg-slate-700 text-slate-200' : 'bg-slate-800 text-white'
+                        }`}>
                           {item.badge}
                         </span>
                       )}
-                    </div>
-                  </button>
-                );
-              }
-
-              /* Full-Width Nav Button */
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[15px] font-normal transition-all cursor-pointer ${
-                    isActive
-                      ? isDarkMode ? 'bg-blue-600 text-white font-medium shadow-md' : 'bg-white text-blue-600 font-medium shadow-xs border border-slate-200/80'
-                      : isDarkMode ? 'text-[#d1d5db] hover:text-white hover:bg-[#252833]' : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={isActive ? (isDarkMode ? 'text-white' : 'text-blue-600') : (isDarkMode ? 'text-slate-400' : 'text-slate-400')}>
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                      isActive
-                        ? isDarkMode ? 'bg-white text-blue-900 font-bold' : 'bg-blue-600 text-white'
-                        : isDarkMode ? 'bg-slate-700 text-slate-200' : 'bg-slate-800 text-white'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

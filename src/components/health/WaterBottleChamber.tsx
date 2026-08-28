@@ -6,7 +6,6 @@ import { Plus, Minus, RotateCcw, Sparkles, Check } from 'lucide-react';
 
 export const WaterBottleChamber: React.FC = () => {
   const { waterCups, logWaterCup, removeWaterCup, resetWaterCups, isDarkMode, accessibility } = useWellness();
-  const [isSplashing, setIsSplashing] = useState(false);
   const isReduced = accessibility.reducedMotion;
 
   const targetCups = 10;
@@ -14,9 +13,7 @@ export const WaterBottleChamber: React.FC = () => {
   const isGoalReached = waterCups >= targetCups;
 
   const handleClickChamber = () => {
-    if (!isReduced) setIsSplashing(true);
     logWaterCup();
-    if (!isReduced) setTimeout(() => setIsSplashing(false), 600);
   };
 
   return (
@@ -61,17 +58,15 @@ export const WaterBottleChamber: React.FC = () => {
           tabIndex={0}
           aria-label="Log 1 Cup of Water"
           title="Click capsule to log +1 cup of water!"
-          className={`relative group cursor-pointer flex items-center transition-transform active:scale-[0.98] ${
-            isSplashing ? 'scale-[1.02]' : ''
-          }`}
+          className="relative group cursor-pointer flex items-center transition-all active:scale-[0.99]"
         >
           {/* Main Capsule Chamber Body */}
           <div
-            className={`relative w-64 xs:w-76 sm:w-88 md:w-96 h-14 sm:h-16 rounded-l-3xl rounded-r-xl p-1.5 border-4 shadow-2xl transition-all overflow-hidden ${
+            className={`relative w-64 xs:w-76 sm:w-88 md:w-96 h-14 sm:h-16 rounded-l-3xl rounded-r-xl p-1.5 border shadow-xl transition-all overflow-hidden ${
               isDarkMode
-                ? 'bg-[#12141a] border-[#2c313f] shadow-black/80'
-                : 'bg-slate-900 border-slate-700 shadow-xl'
-            } ring-2 ring-black/40`}
+                ? 'bg-[#12141a] border-[#2c313f] shadow-black/60'
+                : 'bg-slate-900 border-slate-700 shadow-md'
+            }`}
           >
             {/* Dark Empty Chamber Interior Cavity */}
             <div className="w-full h-full rounded-l-2xl rounded-r-lg bg-[#0e1017] relative overflow-hidden flex items-center">
@@ -136,11 +131,6 @@ export const WaterBottleChamber: React.FC = () => {
               <div className="w-1 h-2 rounded-full bg-slate-900/60" />
             </div>
           </div>
-
-          {/* Click Ripple / Splash Indicator */}
-          {isSplashing && (
-            <div className="absolute inset-0 rounded-3xl border-2 border-cyan-400 animate-ping pointer-events-none" />
-          )}
         </div>
       </div>
 

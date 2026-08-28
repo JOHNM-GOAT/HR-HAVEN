@@ -193,3 +193,73 @@ export interface HrNotification {
   timestamp: string;
   severity: 'low' | 'medium' | 'high';
 }
+
+export interface WorkShiftState {
+  date?: string; // YYYY-MM-DD for daily ephemeral tracking
+  isClockedIn: boolean;
+  clockInTime: string | null;
+  clockOutTime: string | null;
+  totalWorkedSeconds: number;
+  overtimeSeconds: number;
+  shiftStart?: string; // "09:00 AM"
+  shiftEnd?: string; // "06:00 PM"
+  lunchStart?: string; // "12:00 PM"
+  lunchEnd?: string; // "01:00 PM"
+}
+
+export interface WorkShiftRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  department: string;
+  date: string;
+  clockInTime: string;
+  clockOutTime: string | null;
+  totalWorkedSeconds: number;
+  overtimeSeconds: number;
+  status: 'active' | 'completed';
+  createdAt: string;
+}
+
+export type LeaveCategory = 'vacation' | 'mental_health' | 'sick' | 'personal' | 'birthday';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface PtoRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  department: string;
+  category: LeaveCategory;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason?: string;
+  status: LeaveStatus;
+  autoApproved: boolean;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+export interface PtoBalance {
+  totalAllowance: number;
+  usedDays: number;
+  pendingDays: number;
+  remainingDays: number;
+}
+
+export type NavTab =
+  | 'dashboard'
+  | 'analytics'
+  | 'physical'
+  | 'mental'
+  | 'social'
+  | 'inclusive'
+  | 'boundary'
+  | 'pto'
+  | 'hr'
+  | 'accounts'
+  | 'settings';
+
