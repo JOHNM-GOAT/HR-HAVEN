@@ -22,8 +22,14 @@ export const PtoHealthHubView: React.FC = () => {
     ptoRequests,
     setIsPtoModalOpen,
     cancelPtoRequest,
-    isDarkMode
+    isDarkMode,
+    userProfile
   } = useWellness();
+
+  const myPtoRequests = ptoRequests.filter(
+    r => r.userId === (userProfile.id || 'user-default') ||
+      (!r.userId && userProfile.name && r.userName.toLowerCase() === userProfile.name.toLowerCase())
+  );
 
   const PtoTooltip: React.FC<{
     icon?: 'info' | 'help';
@@ -203,11 +209,11 @@ export const PtoHealthHubView: React.FC = () => {
         <div className="flex items-center justify-between">
           <h3 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             <Calendar className="w-4 h-4 text-cyan-500" />
-            Your Time-Off & Recharge Requests ({ptoRequests.length})
+            Your Time-Off & Recharge Requests ({myPtoRequests.length})
           </h3>
         </div>
 
-        {ptoRequests.length === 0 ? (
+        {myPtoRequests.length === 0 ? (
           <div className="py-12 px-4 text-center border-2 border-dashed rounded-3xl border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center">
 
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No time-off requests yet</h4>
@@ -224,7 +230,7 @@ export const PtoHealthHubView: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {ptoRequests.map(req => {
+            {myPtoRequests.map(req => {
               const getIcon = () => {
                 switch (req.category) {
                   case 'mental_health':

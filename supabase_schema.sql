@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.pto_requests (
   department TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('vacation', 'mental_health', 'sick', 'personal', 'birthday')),
   start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
+  end_date DATE NOT NULL CHECK (end_date >= start_date),
   total_days NUMERIC(4, 1) NOT NULL DEFAULT 1.0,
   reason TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),

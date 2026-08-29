@@ -102,7 +102,8 @@ export const AttendanceCalendarModal: React.FC = () => {
 
     // Check if PTO matches
     const matchedPto = ptoRequests.find(
-      r => r.status === 'approved' && dateStr >= r.startDate && dateStr <= r.endDate
+      r => (r.userId === userProfile.id || r.userName === userProfile.name) &&
+        r.status === 'approved' && dateStr >= r.startDate && dateStr <= r.endDate
     );
     if (matchedPto) {
       return {
@@ -140,7 +141,8 @@ export const AttendanceCalendarModal: React.FC = () => {
   const totalMonthOtHours = (totalMonthOtSecs / 3600).toFixed(1);
 
   const monthPtoDays = ptoRequests
-    .filter(r => r.status === 'approved' && (r.startDate.startsWith(monthPrefix) || r.endDate.startsWith(monthPrefix)))
+    .filter(r => (r.userId === userProfile.id || r.userName === userProfile.name) &&
+      r.status === 'approved' && (r.startDate.startsWith(monthPrefix) || r.endDate.startsWith(monthPrefix)))
     .reduce((acc, r) => acc + r.totalDays, 0);
 
   const totalCompletedShifts = userMonthShifts.length + (isViewingCurrentMonth && (workShift.isClockedIn || workShift.totalWorkedSeconds > 0) ? 1 : 0);

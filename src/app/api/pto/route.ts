@@ -4,6 +4,7 @@ import path from 'path';
 import { initialPtoRequests } from '../../../data/initialData';
 import { createServerSupabaseClient } from '../../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../../lib/supabase/client';
+import { getAccountById, hasElevatedRole } from '../../../lib/auth';
 import { PtoRequest } from '../../../types/wellness';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -93,11 +94,22 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, ptoRequest, requestId, status, reviewedBy } = body;
+    const { action, ptoRequest, requestId, status, reviewedBy, actingUserId } = body;
 
     const currentPto = ensurePtoFile();
 
     if (action === 'create' && ptoRequest) {
+      if (!ptoRequest.startDate || !ptoRequest.endDate) {
+        return NextResponse.json({ error: 'startDate and endDate are required' }, { status: 400 });
+      }
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (ptoRequest.startDate < todayStr) {
+        return NextResponse.json({ error: 'startDate cannot be in the past' }, { status: 400 });
+      }
+      if (ptoRequest.endDate < ptoRequest.startDate) {
+        return NextResponse.json({ error: 'endDate cannot be before startDate' }, { status: 400 });
+      }
+
       // 1-Day Mental Health or Birthday leave is auto-approved
       const isAutoApproved =
         (ptoRequest.category === 'mental_health' && ptoRequest.totalDays <= 1) ||
@@ -151,6 +163,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'review' && requestId && status) {
+      const actor = getAccountById(actingUserId);
+      if (!actor || !hasElevatedRole(actor.role)) {
+        return NextResponse.json({ error: 'Only HR or admin accounts can review PTO requests' }, { status: 403 });
+      }
+
       const updated = currentPto.map(r => {
         if (r.id === requestId) {
           return {
@@ -184,6 +201,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'cancel' && requestId) {
+      const target = currentPto.find(r => r.id === requestId);
+      if (!target) {
+        return NextResponse.json({ error: 'PTO request not found' }, { status: 404 });
+      }
+      const actor = getAccountById(actingUserId);
+      const isOwner = !!actor && actor.id === target.userId;
+      if (!actor || (!isOwner && !hasElevatedRole(actor.role))) {
+        return NextResponse.json({ error: 'You can only cancel your own PTO requests' }, { status: 403 });
+      }
+
       const updated = currentPto.map(r => (r.id === requestId ? { ...r, status: 'cancelled' as const } : r));
       writePtoFile(updated);
 

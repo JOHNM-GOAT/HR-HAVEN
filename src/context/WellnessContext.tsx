@@ -414,6 +414,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       'social',
       'inclusive',
       'boundary',
+      'pto',
       'hr',
       'accounts',
       'settings'
@@ -564,101 +565,117 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsAuthLoading(false);
       }
 
-      // Fetch from persistent server API (Supabase & server database)
-      try {
-        const res = await fetch('/api/accounts');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
-            setAccounts(data.accounts);
-          }
-          if (data.deletedAccounts && Array.isArray(data.deletedAccounts)) {
-            setDeletedAccounts(data.deletedAccounts);
-          }
-        }
-      } catch (e) {
-        // Fallback to localStorage
-        try {
-          const savedAccounts = localStorage.getItem('axionhr_accounts');
-          if (savedAccounts) {
-            const parsed: UserAccount[] = JSON.parse(savedAccounts);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              const hasAdmin = parsed.some(a => a.role === 'admin' || a.email.toLowerCase() === 'admin@axionhr.com');
-              if (!hasAdmin) {
-                setAccounts([initialUserAccounts[0], ...parsed]);
-              } else {
-                setAccounts(parsed);
+      // Fetch all persistent server API resources concurrently (Supabase & server database) -
+      // each call is independent of the others, so run them in parallel instead of a sequential waterfall.
+      await Promise.all([
+        // Accounts
+        (async () => {
+          try {
+            const res = await fetch('/api/accounts');
+            if (res.ok) {
+              const data = await res.json();
+              if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
+                setAccounts(data.accounts);
+              }
+              if (data.deletedAccounts && Array.isArray(data.deletedAccounts)) {
+                setDeletedAccounts(data.deletedAccounts);
               }
             }
-          }
-          const savedDeleted = localStorage.getItem('axionhr_deleted_accounts');
-          if (savedDeleted) {
-            const parsed = JSON.parse(savedDeleted);
-            if (Array.isArray(parsed)) {
-              setDeletedAccounts(parsed);
-            }
-          }
-        } catch (err) {}
-      }
-
-      // Fetch badges from persistent server API (Supabase & server database)
-      try {
-        const resBadges = await fetch('/api/badges');
-        if (resBadges.ok) {
-          const badgeData = await resBadges.json();
-          if (badgeData.badges && Array.isArray(badgeData.badges)) {
-            setBadges(badgeData.badges);
-          }
-        }
-      } catch (e) {}
-
-      // Fetch HR notifications from persistent server API (Supabase & server database)
-      try {
-        const resNotifs = await fetch('/api/notifications');
-        if (resNotifs.ok) {
-          const notifData = await resNotifs.json();
-          if (notifData.notifications && Array.isArray(notifData.notifications) && notifData.notifications.length > 0) {
-            setHrNotifications(notifData.notifications);
-          }
-        }
-      } catch (e) {}
-
-      // Fetch moods from persistent server API (Supabase & server database)
-      try {
-        const resMoods = await fetch('/api/moods');
-        if (resMoods.ok) {
-          const moodData = await resMoods.json();
-          if (moodData.moodLogs && Array.isArray(moodData.moodLogs) && moodData.moodLogs.length > 0) {
-            setMoodLogs(moodData.moodLogs);
-          }
-        }
-      } catch (e) {}
-
-      // Fetch PTO requests from persistent server API
-      try {
-        const resPto = await fetch('/api/pto');
-        if (resPto.ok) {
-          const ptoData = await resPto.json();
-          if (ptoData.ptoRequests && Array.isArray(ptoData.ptoRequests)) {
-            const cleaned = ptoData.ptoRequests.filter((p: any) => p.id !== 'pto-2' && p.id !== 'pto-1' && p.userName !== 'Elena Rostova');
-            setPtoRequests(cleaned);
+          } catch (e) {
+            // Fallback to localStorage
             try {
-              localStorage.setItem('axionhr_pto_requests', JSON.stringify(cleaned));
-            } catch (e) {}
+              const savedAccounts = localStorage.getItem('axionhr_accounts');
+              if (savedAccounts) {
+                const parsed: UserAccount[] = JSON.parse(savedAccounts);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  const hasAdmin = parsed.some(a => a.role === 'admin' || a.email.toLowerCase() === 'admin@axionhr.com');
+                  if (!hasAdmin) {
+                    setAccounts([initialUserAccounts[0], ...parsed]);
+                  } else {
+                    setAccounts(parsed);
+                  }
+                }
+              }
+              const savedDeleted = localStorage.getItem('axionhr_deleted_accounts');
+              if (savedDeleted) {
+                const parsed = JSON.parse(savedDeleted);
+                if (Array.isArray(parsed)) {
+                  setDeletedAccounts(parsed);
+                }
+              }
+            } catch (err) {}
           }
-        }
-      } catch (e) {}
+        })(),
 
-      // Fetch Work Shifts & Attendance logs from persistent server API
-      try {
-        const resShifts = await fetch('/api/shifts');
-        if (resShifts.ok) {
-          const shiftData = await resShifts.json();
-          if (shiftData.shifts && Array.isArray(shiftData.shifts)) {
-            setTeamShifts(shiftData.shifts);
-          }
-        }
-      } catch (e) {}
+        // Badges
+        (async () => {
+          try {
+            const resBadges = await fetch('/api/badges');
+            if (resBadges.ok) {
+              const badgeData = await resBadges.json();
+              if (badgeData.badges && Array.isArray(badgeData.badges)) {
+                setBadges(badgeData.badges);
+              }
+            }
+          } catch (e) {}
+        })(),
+
+        // HR notifications
+        (async () => {
+          try {
+            const resNotifs = await fetch('/api/notifications');
+            if (resNotifs.ok) {
+              const notifData = await resNotifs.json();
+              if (notifData.notifications && Array.isArray(notifData.notifications) && notifData.notifications.length > 0) {
+                setHrNotifications(notifData.notifications);
+              }
+            }
+          } catch (e) {}
+        })(),
+
+        // Moods
+        (async () => {
+          try {
+            const resMoods = await fetch('/api/moods');
+            if (resMoods.ok) {
+              const moodData = await resMoods.json();
+              if (moodData.moodLogs && Array.isArray(moodData.moodLogs) && moodData.moodLogs.length > 0) {
+                setMoodLogs(moodData.moodLogs);
+              }
+            }
+          } catch (e) {}
+        })(),
+
+        // PTO requests
+        (async () => {
+          try {
+            const resPto = await fetch('/api/pto');
+            if (resPto.ok) {
+              const ptoData = await resPto.json();
+              if (ptoData.ptoRequests && Array.isArray(ptoData.ptoRequests)) {
+                const cleaned = ptoData.ptoRequests.filter((p: any) => p.id !== 'pto-2' && p.id !== 'pto-1' && p.userName !== 'Elena Rostova');
+                setPtoRequests(cleaned);
+                try {
+                  localStorage.setItem('axionhr_pto_requests', JSON.stringify(cleaned));
+                } catch (e) {}
+              }
+            }
+          } catch (e) {}
+        })(),
+
+        // Work shifts & attendance logs
+        (async () => {
+          try {
+            const resShifts = await fetch('/api/shifts');
+            if (resShifts.ok) {
+              const shiftData = await resShifts.json();
+              if (shiftData.shifts && Array.isArray(shiftData.shifts)) {
+                setTeamShifts(shiftData.shifts);
+              }
+            }
+          } catch (e) {}
+        })()
+      ]);
 
       // Load moods, notifications, badges, and metrics from localStorage
       try {
@@ -884,7 +901,9 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    fetchSupabaseData();
+    // No initial fetchSupabaseData() call here - the loadData() effect above already hydrates
+    // this same data via the (Supabase-backed) REST routes. fetchSupabaseData is still used by
+    // the profiles realtime handler below to re-pull derived data after a profile change.
 
     // Subscribe to real-time events
     const channel = supabase
@@ -1064,7 +1083,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (typeof window !== 'undefined') {
       const currentPath = window.location.pathname.replace(/^\/+/, '').split('/')[0] as NavTab;
       const validTabs: NavTab[] = [
-        'dashboard', 'analytics', 'physical', 'mental', 'social', 'inclusive', 'boundary', 'hr', 'accounts', 'settings'
+        'dashboard', 'analytics', 'physical', 'mental', 'social', 'inclusive', 'boundary', 'pto', 'hr', 'accounts', 'settings'
       ];
       if (validTabs.includes(currentPath)) {
         targetTab = currentPath;
@@ -1921,6 +1940,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   // Live work shift timer when clocked in
+  const workShiftPersistTickRef = useRef<number>(0);
   useEffect(() => {
     if (!workShift.isClockedIn) return;
 
@@ -1934,12 +1954,18 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           totalWorkedSeconds: nextSeconds,
           overtimeSeconds: nextOvertime
         };
-        try {
-          if (userProfile.email) {
-            localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(updated));
-          }
-          localStorage.setItem('axionhr_work_shift', JSON.stringify(updated));
-        } catch (e) {}
+        // Persist to localStorage every 15s instead of every tick - the timer still
+        // ticks the UI every second, but disk writes don't need that frequency.
+        workShiftPersistTickRef.current += 1;
+        if (workShiftPersistTickRef.current >= 15) {
+          workShiftPersistTickRef.current = 0;
+          try {
+            if (userProfile.email) {
+              localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(updated));
+            }
+            localStorage.setItem('axionhr_work_shift', JSON.stringify(updated));
+          } catch (e) {}
+        }
         return updated;
       });
     }, 1000);
@@ -2059,6 +2085,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         body: JSON.stringify({
           action: 'clock_out',
           userId: userProfile.id || 'user-default',
+          actingUserId: userProfile.id || 'user-default',
           userName: userProfile.name || 'System Administrator',
           userAvatar: userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
           department: userProfile.department || 'Executive IT',
@@ -2224,6 +2251,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const reviewPtoRequest = (requestId: string, status: 'approved' | 'rejected') => {
+    if (userRole !== 'admin' && userRole !== 'hr_manager') {
+      setToastNotification('Only HR or admin accounts can review PTO requests.');
+      return;
+    }
+
     let targetReq: PtoRequest | undefined;
     setPtoRequests(prev => {
       const updated = prev.map(r => {
@@ -2276,11 +2308,19 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetch('/api/pto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'review', requestId, status, reviewedBy: userProfile.name })
+      body: JSON.stringify({ action: 'review', requestId, status, reviewedBy: userProfile.name, actingUserId: userProfile.id })
     }).catch(err => console.warn('PTO review notice:', err));
   };
 
   const cancelPtoRequest = (requestId: string) => {
+    const existingReq = ptoRequests.find(r => r.id === requestId);
+    const isOwner = !!existingReq && existingReq.userId === (userProfile.id || 'user-default');
+    const isElevated = userRole === 'admin' || userRole === 'hr_manager';
+    if (!isOwner && !isElevated) {
+      setToastNotification('You can only cancel your own PTO requests.');
+      return;
+    }
+
     let targetReq: PtoRequest | undefined;
     setPtoRequests(prev => {
       const updated = prev.map(r => {
@@ -2312,7 +2352,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetch('/api/pto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel', requestId })
+      body: JSON.stringify({ action: 'cancel', requestId, actingUserId: userProfile.id })
     }).catch(err => console.warn('PTO cancel notice:', err));
   };
 

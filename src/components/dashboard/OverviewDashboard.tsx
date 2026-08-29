@@ -233,7 +233,10 @@ export const OverviewDashboard: React.FC = () => {
 
           {/* Interactive Notification Bell Icon & Popover */}
           {(() => {
-            const upcomingLeave = ptoRequests.find(r => r.status === 'approved' && new Date(r.endDate) >= new Date());
+            const upcomingLeave = ptoRequests.find(
+              r => (r.userId === userProfile.id || r.userName === userProfile.name) &&
+                r.status === 'approved' && new Date(r.endDate) >= new Date()
+            );
 
             const isUserMentioned = (recipientName: string) => {
               if (!recipientName) return false;

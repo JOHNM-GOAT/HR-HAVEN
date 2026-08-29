@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { createServerSupabaseClient } from '../../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../../lib/supabase/client';
+import { getAccountById, hasElevatedRole } from '../../../lib/auth';
 import { WorkShiftRecord } from '../../../types/wellness';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -87,7 +88,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, shift, shiftId, clockOutTime, totalWorkedSeconds, overtimeSeconds } = body;
+    const { action, shift, shiftId, clockOutTime, totalWorkedSeconds, overtimeSeconds, actingUserId } = body;
 
     const currentShifts = ensureShiftsFile();
 
@@ -155,6 +156,13 @@ export async function POST(req: NextRequest) {
 
     if (action === 'clock_out' && (shiftId || body.userId)) {
       const targetUserId = body.userId || (shift && shift.userId);
+
+      const actor = getAccountById(actingUserId);
+      const isSelf = !!actor && !!targetUserId && actor.id === targetUserId;
+      if (!actor || (!isSelf && !hasElevatedRole(actor.role))) {
+        return NextResponse.json({ error: 'You can only clock out your own shift' }, { status: 403 });
+      }
+
       const outTime = clockOutTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const finalWorked = typeof totalWorkedSeconds === 'number' ? totalWorkedSeconds : 0;
       const finalOvertime = typeof overtimeSeconds === 'number' ? overtimeSeconds : 0;
@@ -166,8 +174,8 @@ export async function POST(req: NextRequest) {
           return {
             ...s,
             clockOutTime: outTime,
-            totalWorkedSeconds: finalWorked || s.totalWorkedSeconds,
-            overtimeSeconds: finalOvertime || s.overtimeSeconds,
+            totalWorkedSeconds: typeof totalWorkedSeconds === 'number' ? finalWorked : s.totalWorkedSeconds,
+            overtimeSeconds: typeof overtimeSeconds === 'number' ? finalOvertime : s.overtimeSeconds,
             status: 'completed' as const
           };
         }

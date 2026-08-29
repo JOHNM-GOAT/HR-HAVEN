@@ -151,8 +151,12 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const badgeId = searchParams.get('id');
 
+    if (!badgeId) {
+      return NextResponse.json({ error: 'Missing badge id' }, { status: 400 });
+    }
+
     const current = ensureBadgesFile();
-    const updated = badgeId ? current.filter((b: any) => b.id !== badgeId) : [];
+    const updated = current.filter((b: any) => b.id !== badgeId);
     writeBadgesFile(updated);
 
     if (isSupabaseConfigured() && badgeId) {
