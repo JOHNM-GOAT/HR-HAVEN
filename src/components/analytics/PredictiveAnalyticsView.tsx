@@ -69,6 +69,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
   // Single source of truth: same score & level driving the Dashboard's Burnout Risk Gauge.
   const computedScore = burnoutMetrics.overallScore;
   const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
+  const riskFactors = burnoutMetrics.riskFactors ?? [];
 
   return (
     <div className="space-y-6">
@@ -225,7 +226,10 @@ export const PredictiveAnalyticsView: React.FC = () => {
           Detected Risk Factors & Proactive AI Recommendations
         </h3>
         <div className="space-y-3">
-          {computedScore === 0 ? (
+          {/* Gate on the list actually being empty, not on the score. The score is
+              mood-driven and moves independently of riskFactors, so keying off it
+              left this card rendering a heading with no body. */}
+          {riskFactors.length === 0 ? (
             <div className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode ? 'bg-[#12141a] border-[#262b3a]' : 'bg-emerald-50/60 border-emerald-200'}`}>
               <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shrink-0 mt-0.5">
                 <ShieldCheck className="w-4 h-4" />
@@ -238,7 +242,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
               </div>
             </div>
           ) : (
-            burnoutMetrics.riskFactors.map((factor, index) => (
+            riskFactors.map((factor, index) => (
               <div key={index} className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode ? 'bg-[#12141a] border-[#262b3a]' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
                   <Info className="w-4 h-4" />

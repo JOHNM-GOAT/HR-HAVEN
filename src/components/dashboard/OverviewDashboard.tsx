@@ -81,11 +81,15 @@ export const OverviewDashboard: React.FC = () => {
   };
   const todaysMoodLogs = moodLogs.filter(log => isSameLocalDay(log.createdAt));
 
-  const trendConfig = {
+  const TREND_STYLES = {
     improving: { icon: TrendingDown, label: 'Improving', classes: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60' },
     worsening: { icon: TrendingUp, label: 'Worsening', classes: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60' },
     stable: { icon: Minus, label: 'Stable', classes: 'text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700' }
-  }[burnoutMetrics.trend];
+  };
+  // burnoutMetrics is hydrated from localStorage, so an unexpected/absent trend
+  // must not take the whole dashboard down — fall back to the neutral style.
+  const trendConfig = TREND_STYLES[burnoutMetrics.trend] ?? TREND_STYLES.stable;
+  const riskFactors = burnoutMetrics.riskFactors ?? [];
 
   const moodOptions: { type: MoodType; emoji: string; label: string; color: string }[] = [
     { type: 'thriving', emoji: '🤩', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
@@ -462,14 +466,14 @@ export const OverviewDashboard: React.FC = () => {
                 <span className="text-xs font-bold">{trendConfig.label}</span>
               </div>
 
-              {burnoutMetrics.riskFactors.length === 0 ? (
+              {riskFactors.length === 0 ? (
                 <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${isDarkMode ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-emerald-50/70 border-emerald-200'}`}>
                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                   <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">No risk factors detected — keep it up!</span>
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {burnoutMetrics.riskFactors.slice(0, 2).map((factor, i) => (
+                  {riskFactors.slice(0, 2).map((factor, i) => (
                     <div key={i} className={`flex items-start gap-2 px-3 py-2 rounded-xl border ${isDarkMode ? 'bg-amber-950/20 border-amber-800/40' : 'bg-amber-50/70 border-amber-200'}`}>
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                       <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 leading-snug">{factor}</span>
@@ -479,7 +483,7 @@ export const OverviewDashboard: React.FC = () => {
                     onClick={() => setActiveTab('analytics')}
                     className={`w-full text-center text-[10px] font-bold py-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'text-blue-400 hover:bg-blue-950/30' : 'text-blue-600 hover:bg-blue-50'}`}
                   >
-                    {burnoutMetrics.riskFactors.length > 2 ? `+${burnoutMetrics.riskFactors.length - 2} more — ` : ''}View Full Analysis
+                    {riskFactors.length > 2 ? `+${riskFactors.length - 2} more — ` : ''}View Full Analysis
                   </button>
                 </div>
               )}

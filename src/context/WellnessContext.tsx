@@ -413,8 +413,11 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
       const savedMoods = localStorage.getItem(getUserStorageKey(email, 'mood_logs'));
       if (savedMoods) moods = JSON.parse(savedMoods);
 
+      // Merge over the defaults rather than trusting the stored shape — records
+      // written by earlier builds can be missing fields the UI now reads
+      // unguarded (trend, riskFactors), which would throw during render.
       const savedBurnout = localStorage.getItem(getUserStorageKey(email, 'burnout_metrics'));
-      if (savedBurnout) burnout = JSON.parse(savedBurnout);
+      if (savedBurnout) burnout = { ...burnout, ...JSON.parse(savedBurnout) };
 
       // Boundary Shield settings & the queue it is holding must survive a reload —
       // the whole point of the feature is holding alerts across a long window.
@@ -503,9 +506,6 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [heldNotifications, setHeldNotifications] = useState<HeldNotification[]>([]);
   const batchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // userProfile is declared much further down; these notification effects need the
-  // storage key, so mirror the email into a ref that is synced once it exists.
-  const userProfileEmailRef = useRef<string>('');
 
   // Re-evaluated on a timer so the shield opens/closes on its own as the clock
   // crosses the quiet-hours boundary, without needing a page reload.
@@ -514,13 +514,16 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const timer = setInterval(() => {
       setQuietHoursTick(t => t + 1);
-      // Auto-deliver the held queue as soon as quiet hours are over.
-      if (!isWithinQuietHours(boundaryConfig.quietHoursStart, boundaryConfig.quietHoursEnd)) {
-        releaseHeldNotificationsRef.current();
-      }
+      // Auto-deliver the held queue once the shield stops holding — either quiet
+      // hours ended or the shield was switched off. Checking only the clock left
+      // the queue stranded when a user disarmed the shield mid-window.
+      const stillHolding =
+        boundaryConfig.activeShield &&
+        isWithinQuietHours(boundaryConfig.quietHoursStart, boundaryConfig.quietHoursEnd);
+      if (!stillHolding) releaseHeldNotificationsRef.current();
     }, 30000);
     return () => clearInterval(timer);
-  }, [boundaryConfig.quietHoursStart, boundaryConfig.quietHoursEnd]);
+  }, [boundaryConfig.activeShield, boundaryConfig.quietHoursStart, boundaryConfig.quietHoursEnd]);
 
   const isQuietHoursActive = React.useMemo(
     () => isWithinQuietHours(boundaryConfig.quietHoursStart, boundaryConfig.quietHoursEnd),
@@ -530,6 +533,18 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const isShieldHolding = boundaryConfig.activeShield && isQuietHoursActive;
+
+  // setToastNotification is captured by long-lived intervals (reminders, pomodoro)
+  // that do not re-subscribe when these values change. Read them through refs so
+  // the callback can stay referentially stable and never serves a stale decision.
+  const isShieldHoldingRef = useRef(isShieldHolding);
+  const batchNotificationsRef = useRef(accessibility.batchNotifications);
+  useEffect(() => {
+    isShieldHoldingRef.current = isShieldHolding;
+  }, [isShieldHolding]);
+  useEffect(() => {
+    batchNotificationsRef.current = accessibility.batchNotifications;
+  }, [accessibility.batchNotifications]);
 
   // Urgency keywords — these toasts always show immediately even when batching is ON
   const URGENT_KEYWORDS = [
@@ -555,7 +570,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Boundary Shield takes precedence over batching: during quiet hours the
     // message is held entirely rather than digested a minute later.
-    if (isRoutine && isShieldHolding) {
+    if (isRoutine && isShieldHoldingRef.current) {
       const entry: HeldNotification = {
         id: `held-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         message: msg,
@@ -572,7 +587,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    const shouldBatch = accessibility.batchNotifications && isRoutine;
+    const shouldBatch = batchNotificationsRef.current && isRoutine;
 
     if (shouldBatch) {
       // Queue into batch instead of showing immediately
@@ -586,7 +601,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setToastState(msg);
       toastDismissTimerRef.current = setTimeout(() => setToastState(null), 4000);
     }
-  }, [accessibility.batchNotifications, isUrgentMessage, isShieldHolding]);
+    // Stable identity on purpose — long-lived intervals capture this callback once.
+  }, [isUrgentMessage]);
 
   // Batch flush timer — delivers digest every 60 seconds when batching is ON and queue is non-empty
   useEffect(() => {
@@ -633,13 +649,6 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const heldNotificationsRef = useRef<HeldNotification[]>([]);
   useEffect(() => {
     heldNotificationsRef.current = heldNotifications;
-    if (typeof window === 'undefined' || !userProfileEmailRef.current) return;
-    try {
-      localStorage.setItem(
-        getUserStorageKey(userProfileEmailRef.current, 'held_notifications'),
-        JSON.stringify(heldNotifications)
-      );
-    } catch (e) {}
   }, [heldNotifications]);
 
   // Delivers everything the shield held, as a single digest through the existing
@@ -874,7 +883,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (parsed.overallScore === 68 && parsed.consecutiveWorkDays === 9) {
               setBurnoutMetrics(initialBurnoutMetrics);
             } else {
-              setBurnoutMetrics(parsed);
+              // Same defaults merge as the per-user load path above.
+              setBurnoutMetrics({ ...initialBurnoutMetrics, ...parsed });
             }
           }
         }
@@ -1487,15 +1497,18 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const toggleBoundaryShield = () => {
-    setBoundaryConfig(prev => {
-      const nextState = !prev.activeShield;
-      setToastNotification(
-        nextState
-          ? `Boundary Guard ACTIVE. Non-urgent alerts will be held during quiet hours (${formatQuietHourLabel(prev.quietHoursStart)} – ${formatQuietHourLabel(prev.quietHoursEnd)}).`
-          : 'Boundary Guard paused. All alerts will arrive immediately.'
-      );
-      return { ...prev, activeShield: nextState };
-    });
+    const nextState = !boundaryConfig.activeShield;
+    setBoundaryConfig(prev => ({ ...prev, activeShield: nextState }));
+
+    // Disarming should deliver whatever is already queued rather than leaving it
+    // stranded until quiet hours end.
+    if (!nextState) releaseHeldNotifications();
+
+    setToastNotification(
+      nextState
+        ? `Boundary Guard ACTIVE. Non-urgent alerts will be held during quiet hours (${formatQuietHourLabel(boundaryConfig.quietHoursStart)} – ${formatQuietHourLabel(boundaryConfig.quietHoursEnd)}).`
+        : 'Boundary Guard paused. All alerts will arrive immediately.'
+    );
   };
 
   const updateQuietHours = (start: string, end: string) => {
@@ -1723,12 +1736,9 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [userProfile, setUserProfile] = useState<UserProfile>(initialUserProfile);
 
-  // Feed the notification effects above the current storage key, and persist the
-  // shield's own settings so an armed shield stays armed across reloads.
-  useEffect(() => {
-    userProfileEmailRef.current = userProfile.email || '';
-  }, [userProfile.email]);
-
+  // Persist the shield's settings and its held queue. Both key off userProfile.email
+  // read in the same render as the data, so a login that swaps profile and queue
+  // together cannot write one user's notifications under another user's key.
   useEffect(() => {
     if (typeof window === 'undefined' || !userProfile.email) return;
     try {
@@ -1738,6 +1748,16 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       );
     } catch (e) {}
   }, [boundaryConfig, userProfile.email]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !userProfile.email) return;
+    try {
+      localStorage.setItem(
+        getUserStorageKey(userProfile.email, 'held_notifications'),
+        JSON.stringify(heldNotifications)
+      );
+    } catch (e) {}
+  }, [heldNotifications, userProfile.email]);
 
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
@@ -2042,10 +2062,21 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 0; // Clean 0 cups baseline to start
   });
 
+  // Mirrors waterCups so logWaterCup can increment without reading a possibly
+  // stale render value. Kept in sync for every other path that changes the count.
+  const waterCupsRef = useRef(waterCups);
+  useEffect(() => {
+    waterCupsRef.current = waterCups;
+  }, [waterCups]);
+
   const logWaterCup = () => {
     // Side effects stay outside the updater — React invokes updaters twice in
-    // StrictMode, which fired the toast (and shield hold) twice per cup.
-    const next = waterCups >= 10 ? 10 : waterCups + 1;
+    // StrictMode, which fired the toast (and shield hold) twice per cup. The count
+    // comes from a ref updated synchronously here, so two calls dispatched before
+    // a re-render (double-tap, or a click racing a hydration reminder) still
+    // compound instead of both reading the same render's value.
+    const next = waterCupsRef.current >= 10 ? 10 : waterCupsRef.current + 1;
+    waterCupsRef.current = next;
     setWaterCups(next);
     if (typeof window !== 'undefined') {
       try {
@@ -2229,7 +2260,10 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } catch (e) {}
       }
 
-      if (workShift.overtimeSeconds > 0) {
+      // Gate on the freshly computed total, not the tick-derived display value —
+      // a throttled background tab leaves the latter stale (often 0) and the
+      // overtime would silently never reach the weekly metric.
+      if (nextState.overtimeSeconds > 0) {
         const addedOt = parseFloat(overtimeHours);
         setBurnoutMetrics(bm => {
           const updated: BurnoutMetrics = {
@@ -2250,8 +2284,10 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return {
             ...s,
             clockOutTime: timeStr,
-            totalWorkedSeconds: workShift.totalWorkedSeconds,
-            overtimeSeconds: workShift.overtimeSeconds,
+            // Wall-clock totals, so the HR board matches what the user actually
+            // worked even if the tab was throttled and the tick never caught up.
+            totalWorkedSeconds: finalSeconds,
+            overtimeSeconds: nextState.overtimeSeconds,
             status: 'completed'
           };
         }
@@ -2270,8 +2306,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           department: userProfile.department || 'Executive IT',
           clockInTime: workShift.clockInTime || timeStr,
           clockOutTime: timeStr,
-          totalWorkedSeconds: workShift.totalWorkedSeconds,
-          overtimeSeconds: workShift.overtimeSeconds
+          totalWorkedSeconds: finalSeconds,
+          overtimeSeconds: nextState.overtimeSeconds
         })
       }).then(async res => {
         if (res.ok) {
