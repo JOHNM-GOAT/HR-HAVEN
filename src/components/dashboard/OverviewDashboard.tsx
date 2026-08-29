@@ -445,12 +445,9 @@ export const OverviewDashboard: React.FC = () => {
 
             {/* Trend + Risk Factors (live-computed, same source as AI Burnout Predictor page) */}
             <div className="space-y-2">
-              <div className={`flex items-center justify-between px-3 py-2 rounded-xl border ${trendConfig.classes}`}>
-                <span className="flex items-center gap-1.5 text-xs font-bold">
-                  <trendConfig.icon className="w-3.5 h-3.5" />
-                  {trendConfig.label}
-                </span>
-                <span className="text-[10px] font-semibold opacity-80">7-day trend</span>
+              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border ${trendConfig.classes}`}>
+                <trendConfig.icon className="w-3.5 h-3.5" />
+                <span className="text-xs font-bold">{trendConfig.label}</span>
               </div>
 
               {burnoutMetrics.riskFactors.length === 0 ? (

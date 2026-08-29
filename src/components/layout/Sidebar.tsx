@@ -14,8 +14,7 @@ import {
   Users,
   UserCog,
   LogOut,
-  Palmtree,
-  Moon
+  Palmtree
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -28,9 +27,7 @@ export const Sidebar: React.FC = () => {
     toggleSidebar,
     userProfile,
     isDarkMode,
-    unreadHrNotificationCount,
-    boundaryConfig,
-    toggleBoundaryShield
+    unreadHrNotificationCount
   } = useWellness();
 
   const hrBadge = unreadHrNotificationCount > 0 ? `${unreadHrNotificationCount} Alerts` : 'HR';
@@ -258,23 +255,6 @@ export const Sidebar: React.FC = () => {
           {isSidebarOpen ? (
             /* Full-Width User Card */
             <>
-              {userRole === 'employee' && (
-                <button
-                  onClick={toggleBoundaryShield}
-                  className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                    boundaryConfig.activeShield
-                      ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300'
-                      : isDarkMode
-                        ? 'bg-[#20222a] border-[#2e323e] text-slate-400 hover:bg-[#282b36]'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                  }`}
-                  title="Work-Life Boundary Guard"
-                >
-                  <Moon className="w-3.5 h-3.5" />
-                  <span>Boundary Guard: {boundaryConfig.activeShield ? 'ON' : 'OFF'}</span>
-                </button>
-              )}
-
               <div
                 onClick={() => setActiveTab('settings')}
                 className={`p-2.5 rounded-xl border transition-all flex items-center gap-2.5 cursor-pointer group shadow-2xs ${
