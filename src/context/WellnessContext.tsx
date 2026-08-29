@@ -2356,7 +2356,10 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }).catch(err => console.warn('PTO cancel notice:', err));
   };
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 768;
+  });
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   const toggleSidebar = (open?: boolean) => {

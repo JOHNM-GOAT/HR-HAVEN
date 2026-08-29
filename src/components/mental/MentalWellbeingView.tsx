@@ -132,19 +132,23 @@ export const MentalWellbeingView: React.FC = () => {
           </div>
 
           {/* Quick Prompt Chips */}
-          <div className={`py-3 flex items-center gap-2 overflow-x-auto no-scrollbar border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-            {quickPrompts.map((prompt, idx) => (
-              <button
-                key={idx}
-                onClick={() => sendCoachMessage(prompt)}
-                className={`text-xs px-3 py-1.5 rounded-full shrink-0 transition-all font-medium border cursor-pointer ${isDarkMode
-                  ? 'bg-slate-800 text-slate-300 border-slate-700 hover:border-blue-500 hover:text-white'
-                  : 'text-slate-700 bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
-                  }`}
-              >
-                {prompt}
-              </button>
-            ))}
+          <div className={`relative border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+            <div className="py-3 flex items-center gap-2 overflow-x-auto no-scrollbar pr-6">
+              {quickPrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => sendCoachMessage(prompt)}
+                  className={`text-xs px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap transition-all font-medium border cursor-pointer ${isDarkMode
+                    ? 'bg-slate-800 text-slate-300 border-slate-700 hover:border-blue-500 hover:text-white'
+                    : 'text-slate-700 bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
+                    }`}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            {/* Fade hint that the row scrolls - chips were clipping with no scroll affordance */}
+            <div className={`pointer-events-none absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l ${isDarkMode ? 'from-slate-900' : 'from-white'} to-transparent`} />
           </div>
 
           {/* Messages Container */}

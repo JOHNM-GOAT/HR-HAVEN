@@ -865,7 +865,7 @@ export const OverviewDashboard: React.FC = () => {
                   <span className="mb-1 flex items-center justify-center pointer-events-none">
                     <PolarBearEmoji mood={option.type} size={36} />
                   </span>
-                  <span className={`text-[10px] font-bold transition-colors group-hover:text-blue-500 truncate max-w-full ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <span className={`text-[10px] leading-tight font-bold text-center transition-colors group-hover:text-blue-500 break-words ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                     {option.label}
                   </span>
                 </button>

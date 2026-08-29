@@ -23,6 +23,14 @@ export const BoundaryGuardView: React.FC = () => {
   const [startTime, setStartTime] = useState(boundaryConfig.quietHoursStart);
   const [endTime, setEndTime] = useState(boundaryConfig.quietHoursEnd);
 
+  const heldMessages: { id: string; source: string; heldSince: string }[] = boundaryConfig.activeShield
+    ? [
+        { id: 'held-1', source: 'Slack: #engineering-sync (3 messages)', heldSince: '8:14 PM' },
+        { id: 'held-2', source: 'Email: Q3 Release Roadmap Update', heldSince: '9:02 PM' },
+        { id: 'held-3', source: 'Jira: Ticket #AX-204 Assignee update', heldSince: '10:15 PM' }
+      ]
+    : [];
+
   const BoundaryTooltip: React.FC<{
     icon?: 'info' | 'help';
     content: React.ReactNode;
@@ -218,36 +226,22 @@ export const BoundaryGuardView: React.FC = () => {
               </div>
               <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-blue-950/60 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'
                 }`}>
-                {boundaryConfig.delayedMessagesCount} Held
+                {heldMessages.length} Held
               </span>
             </div>
 
             <div className={`p-4 rounded-xl border space-y-2 ${isDarkMode ? 'bg-[#1a1c22] border-[#2e323d]' : 'bg-slate-50 border-slate-200'
               }`}>
-              <div className="flex items-center justify-between text-xs">
-                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  Slack: #engineering-sync (3 messages)
-                </span>
-                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Held since 8:14 PM
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  Email: Q3 Release Roadmap Update
-                </span>
-                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Held since 9:02 PM
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  Jira: Ticket #AX-204 Assignee update
-                </span>
-                <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Held since 10:15 PM
-                </span>
-              </div>
+              {heldMessages.map(msg => (
+                <div key={msg.id} className="flex items-center justify-between text-xs">
+                  <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {msg.source}
+                  </span>
+                  <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Held since {msg.heldSince}
+                  </span>
+                </div>
+              ))}
             </div>
             <p className={`text-[11px] mt-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               All held notifications will automatically flush to your inbox tomorrow at {boundaryConfig.quietHoursEnd}.

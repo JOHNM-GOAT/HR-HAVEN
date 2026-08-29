@@ -112,13 +112,17 @@ export default function Home() {
         {!isSidebarOpen && (
           <button
             onClick={() => toggleSidebar(true)}
-            className="md:hidden fixed top-4 left-4 z-40 px-3 py-2 rounded-2xl bg-white border border-slate-200/90 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 shadow-lg transition-all active:scale-95 flex items-center gap-2.5 font-bold text-xs cursor-pointer group"
+            className={`md:hidden fixed top-4 left-4 z-40 px-3 py-2 rounded-2xl border shadow-lg transition-all active:scale-95 flex items-center gap-2.5 font-bold text-xs cursor-pointer group ${
+              isDarkMode
+                ? 'bg-[#20222a] border-[#2e323e] text-slate-200 hover:bg-[#282b36] hover:border-blue-500'
+                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+            }`}
             title="Open Navigation Menu"
           >
             <Menu className="w-4.5 h-4.5 text-blue-600" />
-            <div className="h-4 w-px bg-slate-200" />
+            <div className={`h-4 w-px ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`} />
             <AxionLogo className="w-5 h-5 group-hover:scale-105 transition-transform" />
-            <span className="font-extrabold text-slate-800 text-sm">Axion<span className="text-blue-600">HR</span></span>
+            <span className={`font-extrabold text-sm ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>Axion<span className="text-blue-600">HR</span></span>
           </button>
         )}
 

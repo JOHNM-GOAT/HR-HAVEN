@@ -22,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-slate-100 text-slate-900 antialiased min-h-screen selection:bg-blue-600 selection:text-white`}>
+      <body
+        className={`${inter.className} bg-slate-100 text-slate-900 antialiased min-h-screen selection:bg-blue-600 selection:text-white`}
+        suppressHydrationWarning
+      >
         <WellnessProvider>
           {children}
         </WellnessProvider>
