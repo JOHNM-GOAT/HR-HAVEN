@@ -26,7 +26,10 @@ import {
   LeaveStatus,
   HeldNotification,
   isWithinQuietHours,
-  formatQuietHourLabel
+  formatQuietHourLabel,
+  normalizeWorkShift,
+  withLiveWorkTotals,
+  computeWorkedSeconds
 } from '../types/wellness';
 import { 
   initialBurnoutMetrics, 
@@ -355,7 +358,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
 
 const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
   const initial = getAccountInitialState(email, role, name);
-  let shift = initial.workShift;
+  let shift: WorkShiftState = initial.workShift;
   let water = initial.waterCups;
   let moods = initial.moodLogs;
   let burnout = initial.burnoutMetrics;
@@ -377,15 +380,19 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
             clockOutTime: null,
             totalWorkedSeconds: 0,
             overtimeSeconds: 0,
+            segmentStartedAt: null,
+            bankedSeconds: 0,
             ...STANDARD_SCHEDULE
           };
           localStorage.setItem(getUserStorageKey(email, 'work_shift'), JSON.stringify(shift));
         } else {
-          shift = {
+          // Recompute against the wall clock so a shift left running while the tab
+          // was closed (or the user was logged out) resumes at the right elapsed time.
+          shift = normalizeWorkShift({
             ...parsed,
             date: today,
             ...STANDARD_SCHEDULE
-          };
+          });
         }
       }
 
@@ -422,7 +429,10 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
     } catch (e) {}
   }
 
-  return { shift, water, moods, burnout, boundary, held };
+  // Normalize every path, not just the restored-from-storage one: the seeded
+  // accounts start clocked in, and without timing fields they would read as zero.
+  // normalizeWorkShift is idempotent, so re-running it here is safe.
+  return { shift: normalizeWorkShift(shift), water, moods, burnout, boundary, held };
 };
 
 export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -2083,7 +2093,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const saved = localStorage.getItem('axionhr_work_shift');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') return parsed;
+          if (parsed && typeof parsed === 'object') return normalizeWorkShift(parsed);
         }
       } catch (e) {}
     }
@@ -2092,43 +2102,45 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       clockInTime: null,
       clockOutTime: null,
       totalWorkedSeconds: 0,
-      overtimeSeconds: 0
+      overtimeSeconds: 0,
+      segmentStartedAt: null,
+      bankedSeconds: 0
     };
   });
 
-  // Live work shift timer when clocked in
-  const workShiftPersistTickRef = useRef<number>(0);
+  // Live work shift timer. The tick only re-derives the display value from
+  // segmentStartedAt — it never accumulates — so pausing (background tab, closed
+  // tab, logged out) cannot drift the total. No periodic persistence is needed
+  // either: the authoritative fields change only on clock in/out.
   useEffect(() => {
     if (!workShift.isClockedIn) return;
 
-    const timer = setInterval(() => {
+    const sync = () => {
       setWorkShift((prev: WorkShiftState) => {
         if (!prev.isClockedIn) return prev;
-        const nextSeconds = prev.totalWorkedSeconds + 1;
-        const nextOvertime = Math.max(0, nextSeconds - 28800); // 8 hours standard (28800s)
-        const updated: WorkShiftState = {
-          ...prev,
-          totalWorkedSeconds: nextSeconds,
-          overtimeSeconds: nextOvertime
-        };
-        // Persist to localStorage every 15s instead of every tick - the timer still
-        // ticks the UI every second, but disk writes don't need that frequency.
-        workShiftPersistTickRef.current += 1;
-        if (workShiftPersistTickRef.current >= 15) {
-          workShiftPersistTickRef.current = 0;
-          try {
-            if (userProfile.email) {
-              localStorage.setItem(getUserStorageKey(userProfile.email, 'work_shift'), JSON.stringify(updated));
-            }
-            localStorage.setItem('axionhr_work_shift', JSON.stringify(updated));
-          } catch (e) {}
-        }
-        return updated;
+        const next = withLiveWorkTotals(prev);
+        // Skip the state update on ticks where the whole second hasn't changed.
+        return next.totalWorkedSeconds === prev.totalWorkedSeconds ? prev : next;
       });
-    }, 1000);
+    };
 
-    return () => clearInterval(timer);
-  }, [workShift.isClockedIn, userProfile.email]);
+    sync();
+    const timer = setInterval(sync, 1000);
+
+    // Browsers throttle timers in hidden tabs, so re-sync the moment we're visible
+    // again rather than waiting for the next (possibly delayed) tick.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', sync);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', sync);
+    };
+  }, [workShift.isClockedIn]);
 
   const toggleClockInOut = () => {
     const isCurrentlyClockedIn = workShift.isClockedIn;
@@ -2137,15 +2149,19 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     if (willBeClockedIn) {
-      const nextState: WorkShiftState = {
+      // Start a new timed segment; anything already worked today stays banked so a
+      // second clock-in resumes on top of it rather than restarting at zero.
+      const nextState: WorkShiftState = withLiveWorkTotals({
         date: getTodayDateStr(),
         isClockedIn: true,
         clockInTime: timeStr,
         clockOutTime: null,
-        totalWorkedSeconds: workShift.totalWorkedSeconds > 0 ? workShift.totalWorkedSeconds : 0,
-        overtimeSeconds: workShift.overtimeSeconds > 0 ? workShift.overtimeSeconds : 0,
+        totalWorkedSeconds: 0,
+        overtimeSeconds: 0,
+        segmentStartedAt: now.getTime(),
+        bankedSeconds: Math.max(0, workShift.bankedSeconds ?? workShift.totalWorkedSeconds ?? 0),
         ...STANDARD_SCHEDULE
-      };
+      });
       setWorkShift(nextState);
       if (typeof window !== 'undefined') {
         try {
@@ -2188,15 +2204,21 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setToastNotification(`🟢 Clocked in at ${timeStr}. Standard shift: 9:00 AM – 6:00 PM (1h Lunch at 12:00 PM). Have a productive day!`);
     } else {
-      const workedHours = (workShift.totalWorkedSeconds / 3600).toFixed(1);
-      const overtimeHours = (workShift.overtimeSeconds / 3600).toFixed(1);
-      const nextState: WorkShiftState = {
+      // Close the running segment: fold its elapsed time into bankedSeconds and stop
+      // measuring. Computed here rather than read off the display value, which can
+      // trail the wall clock by up to a tick.
+      const finalSeconds = computeWorkedSeconds(workShift, now.getTime());
+      const nextState: WorkShiftState = withLiveWorkTotals({
         ...workShift,
         date: getTodayDateStr(),
         isClockedIn: false,
         clockOutTime: timeStr,
+        segmentStartedAt: null,
+        bankedSeconds: finalSeconds,
         ...STANDARD_SCHEDULE
-      };
+      });
+      const workedHours = (finalSeconds / 3600).toFixed(1);
+      const overtimeHours = (nextState.overtimeSeconds / 3600).toFixed(1);
       setWorkShift(nextState);
       if (typeof window !== 'undefined') {
         try {
@@ -2274,6 +2296,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       clockOutTime: null,
       totalWorkedSeconds: 0,
       overtimeSeconds: 0,
+      segmentStartedAt: null,
+      bankedSeconds: 0,
       ...STANDARD_SCHEDULE
     };
     setWorkShift(clearedState);

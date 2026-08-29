@@ -269,13 +269,58 @@ export interface WorkShiftState {
   isClockedIn: boolean;
   clockInTime: string | null;
   clockOutTime: string | null;
+  /** Derived for display from bankedSeconds + the running segment. Not authoritative. */
   totalWorkedSeconds: number;
   overtimeSeconds: number;
+  /** Epoch ms the current clocked-in segment began; null while clocked out. */
+  segmentStartedAt?: number | null;
+  /** Seconds from segments already closed today (clock in -> out -> in again). */
+  bankedSeconds?: number;
   shiftStart?: string; // "09:00 AM"
   shiftEnd?: string; // "06:00 PM"
   lunchStart?: string; // "12:00 PM"
   lunchEnd?: string; // "01:00 PM"
 }
+
+export const STANDARD_SHIFT_SECONDS = 8 * 3600;
+
+/**
+ * Worked time is measured against the wall clock rather than accumulated per tick,
+ * so it stays correct while the tab is closed, backgrounded, or the user is logged
+ * out — intervals simply don't fire in those states.
+ */
+export const computeWorkedSeconds = (shift: WorkShiftState, now: number = Date.now()): number => {
+  const banked = shift.bankedSeconds ?? 0;
+  if (!shift.isClockedIn || !shift.segmentStartedAt) return Math.max(0, Math.round(banked));
+  // Guard against a clock change making the segment look negative.
+  const elapsed = Math.max(0, (now - shift.segmentStartedAt) / 1000);
+  return Math.max(0, Math.round(banked + elapsed));
+};
+
+/** Refreshes the derived display fields from the authoritative timing fields. */
+export const withLiveWorkTotals = (shift: WorkShiftState, now: number = Date.now()): WorkShiftState => {
+  const totalWorkedSeconds = computeWorkedSeconds(shift, now);
+  return {
+    ...shift,
+    totalWorkedSeconds,
+    overtimeSeconds: Math.max(0, totalWorkedSeconds - STANDARD_SHIFT_SECONDS)
+  };
+};
+
+/**
+ * Upgrades a stored shift to the wall-clock fields and recomputes totals. Records
+ * saved before those fields existed only kept a display string like "04:32 PM",
+ * so elapsed time cannot be recovered for them — measurement resumes from now.
+ */
+export const normalizeWorkShift = (shift: WorkShiftState, now: number = Date.now()): WorkShiftState =>
+  withLiveWorkTotals(
+    {
+      ...shift,
+      bankedSeconds: shift.bankedSeconds ?? shift.totalWorkedSeconds ?? 0,
+      segmentStartedAt: shift.isClockedIn ? (shift.segmentStartedAt ?? now) : null
+    },
+    now
+  );
 
 export interface WorkShiftRecord {
   id: string;
