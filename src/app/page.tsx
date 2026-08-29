@@ -105,37 +105,49 @@ export default function Home() {
     >
       <Sidebar />
 
-      <main className={`flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto max-w-full relative transition-colors ${
+      <main className={`flex-1 overflow-y-auto max-w-full relative transition-colors ${
         isDarkMode ? 'bg-[#18191f]/95 text-slate-100' : 'bg-slate-100/80 text-slate-900'
       }`}>
-        {/* Floating Menu Reopen Button when Sidebar is closed (Mobile View) */}
+        {/* Mobile app bar. Sticky and in normal flow rather than a floating overlay —
+            as an overlay it sat on top of the page heading and hid it. */}
         {!isSidebarOpen && (
-          <button
-            onClick={() => toggleSidebar(true)}
-            className={`md:hidden fixed top-4 left-4 z-40 px-3 py-2 rounded-2xl border shadow-lg transition-all active:scale-95 flex items-center gap-2.5 font-bold text-xs cursor-pointer group ${
+          <div
+            className={`md:hidden sticky top-0 z-40 flex items-center gap-2.5 px-4 py-2.5 border-b backdrop-blur-md ${
               isDarkMode
-                ? 'bg-[#20222a] border-[#2e323e] text-slate-200 hover:bg-[#282b36] hover:border-blue-500'
-                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                ? 'bg-[#18191f]/90 border-[#2e323e]'
+                : 'bg-white/90 border-slate-200/90'
             }`}
-            title="Open Navigation Menu"
           >
-            <Menu className="w-4.5 h-4.5 text-blue-600" />
-            <div className={`h-4 w-px ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`} />
-            <AxionLogo className="w-5 h-5 group-hover:scale-105 transition-transform" />
-            <span className={`font-extrabold text-sm ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>Axion<span className="text-blue-600">HR</span></span>
-          </button>
+            <button
+              onClick={() => toggleSidebar(true)}
+              className={`w-11 h-11 -ml-1.5 shrink-0 flex items-center justify-center rounded-xl transition-all active:scale-95 cursor-pointer ${
+                isDarkMode ? 'text-slate-200 hover:bg-[#282b36]' : 'text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Open Navigation Menu"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5 text-blue-600" />
+            </button>
+            <div className={`h-5 w-px shrink-0 ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`} />
+            <AxionLogo className="w-5 h-5 shrink-0" />
+            <span className={`font-extrabold text-sm ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+              Axion<span className="text-blue-600">HR</span>
+            </span>
+          </div>
         )}
 
         <TopNavigationProgress />
 
-        <div className="max-w-[1600px] mx-auto">
-          {isNavigating ? (
-            <ViewSkeleton tab={activeTab} />
-          ) : (
-            <PageTransition transitionKey={activeTab}>
-              {renderActiveView()}
-            </PageTransition>
-          )}
+        <div className="p-4 sm:p-6 md:p-8">
+          <div className="max-w-[1600px] mx-auto">
+            {isNavigating ? (
+              <ViewSkeleton tab={activeTab} />
+            ) : (
+              <PageTransition transitionKey={activeTab}>
+                {renderActiveView()}
+              </PageTransition>
+            )}
+          </div>
         </div>
       </main>
 

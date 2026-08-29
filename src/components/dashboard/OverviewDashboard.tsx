@@ -98,15 +98,15 @@ export const OverviewDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Welcome Header (Transparent, Borderless & Boxless) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 pb-2">
-        <div>
-          <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pt-1 pb-2">
+        <div className="min-w-0">
+          <h2 className={`text-xl sm:text-3xl font-bold tracking-tight truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             Hi, <span className="text-blue-600 dark:text-blue-400">{userProfile.name}</span>
           </h2>
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* AI Coach Insight Icon-only Button */}
           <button
             onClick={() => setActiveTab('mental')}
@@ -120,12 +120,16 @@ export const OverviewDashboard: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           </button>
 
+          {/* Labels shorten rather than wrap below sm — the full wording pushed this
+              row past the viewport on a 375px screen. */}
           <button
             onClick={() => setActiveExercise('stretch')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer active:scale-95"
+            title="Take a 2-minute break"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer active:scale-95 whitespace-nowrap"
           >
-            <Heart className="w-4 h-4 fill-white" />
-            <span>Take 2-Min Break</span>
+            <Heart className="w-4 h-4 shrink-0 fill-white" />
+            <span className="hidden sm:inline">Take 2-Min Break</span>
+            <span className="sm:hidden">Break</span>
           </button>
           <button
             onClick={() => {
@@ -134,19 +138,27 @@ export const OverviewDashboard: React.FC = () => {
                 toggleFocusMode();
               }
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${pomodoro.isRunning
+            title={pomodoro.isRunning ? 'Focus session active' : 'Start a focus session'}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 whitespace-nowrap ${pomodoro.isRunning
                 ? 'bg-emerald-600 text-white shadow-emerald-500/20 shadow-md'
                 : isDarkMode
                   ? 'bg-[#202229] border border-[#2e323d] text-slate-200 hover:bg-[#282b35]'
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
               }`}
           >
-            <Zap className={`w-4 h-4 ${pomodoro.isRunning ? 'animate-bounce' : ''}`} />
-            <span>
-              {pomodoro.isRunning
-                ? `Focus Active (${Math.floor(pomodoro.secondsRemaining / 60)}:${String(pomodoro.secondsRemaining % 60).padStart(2, '0')})`
-                : 'Start Focus Session'}
-            </span>
+            <Zap className={`w-4 h-4 shrink-0 ${pomodoro.isRunning ? 'animate-bounce' : ''}`} />
+            {pomodoro.isRunning ? (
+              // Keep the countdown at every size — it is live state, not a label.
+              <span>
+                {`${Math.floor(pomodoro.secondsRemaining / 60)}:${String(pomodoro.secondsRemaining % 60).padStart(2, '0')}`}
+                <span className="hidden sm:inline"> Focus Active</span>
+              </span>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Start Focus Session</span>
+                <span className="sm:hidden">Focus</span>
+              </>
+            )}
           </button>
 
           <NotificationsBell />
@@ -194,12 +206,12 @@ export const OverviewDashboard: React.FC = () => {
             : 'high_ot';
 
           return (
-            <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+            <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      <Clock className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
                       Workday Shift Gauge
                     </h3>
                     <Tooltip
@@ -234,16 +246,16 @@ export const OverviewDashboard: React.FC = () => {
                       }
                     />
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {isLate && (
                       <span
                         title={`Clocked in ${formatLateDuration(lateMinutes)} after the 9:00 AM standard start`}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
                       >
-                        ⏰ Late {formatLateDuration(lateMinutes)}
+                        ⏰ {formatLateDuration(lateMinutes)}
                       </span>
                     )}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${
                       workShift.isClockedIn
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
@@ -366,12 +378,12 @@ export const OverviewDashboard: React.FC = () => {
         })()}
 
         {/* Card 2: Burnout Risk Ring Gauge */}
-        <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+        <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <h3 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  <ShieldAlert className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
                   Burnout Risk Gauge
                 </h3>
                 <Tooltip
@@ -406,7 +418,7 @@ export const OverviewDashboard: React.FC = () => {
                   }
                 />
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                 Live Telemetry
               </span>
             </div>
@@ -476,13 +488,13 @@ export const OverviewDashboard: React.FC = () => {
         </div>
 
         {/* Card 3: Daily Mood Check-In Widget (Re-adjusted to 1-Column Fit) */}
-        <div className={`enterprise-card p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+        <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
           <div>
             {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <h3 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  <Smile className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <Smile className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
                   Daily Mood Check-In
                 </h3>
                 <Tooltip
@@ -501,8 +513,8 @@ export const OverviewDashboard: React.FC = () => {
                   }
                 />
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                {todaysMoodLogs.length > 0 ? `${todaysMoodLogs.length} logged today` : 'Quick Check'}
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                {todaysMoodLogs.length > 0 ? `${todaysMoodLogs.length} logged` : 'Quick Check'}
               </span>
             </div>
 

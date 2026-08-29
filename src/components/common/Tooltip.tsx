@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Info, HelpCircle } from 'lucide-react';
 import { useWellness } from '../../context/WellnessContext';
 
@@ -19,6 +19,42 @@ export const Tooltip: React.FC<{
 }> = ({ icon = 'help', content, align = 'center', accent = 'blue', className = '' }) => {
   const { isDarkMode } = useWellness();
   const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // The panel is anchored to a small icon, so on narrow screens it can extend past
+  // either viewport edge. Nudge it back inside once it opens.
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+
+    // Clear any previous correction so measurement starts from the class position.
+    el.style.left = '';
+    el.style.right = '';
+    if (!isOpen) return;
+
+    // Measure with the open/close transform neutralised — the scale/translate
+    // animation is still mid-flight here and would skew the rect.
+    el.style.transition = 'none';
+    el.style.transform = 'none';
+
+    const rect = el.getBoundingClientRect();
+    const gutter = 8;
+    let dx = 0;
+    if (rect.right > window.innerWidth - gutter) dx = window.innerWidth - gutter - rect.right;
+    if (rect.left + dx < gutter) dx = gutter - rect.left;
+    const usedLeft = parseFloat(getComputedStyle(el).left);
+
+    el.style.transform = '';
+    el.style.transition = '';
+
+    // Shift the used `left` by the delta. A margin cannot move a box that is
+    // anchored with `right: 0`, and overriding `transform` would drop the
+    // open animation; adjusting `left` works for every alignment.
+    if (dx !== 0 && !Number.isNaN(usedLeft)) {
+      el.style.right = 'auto';
+      el.style.left = `${Math.round(usedLeft + dx)}px`;
+    }
+  }, [isOpen]);
 
   return (
     <div
@@ -46,8 +82,9 @@ export const Tooltip: React.FC<{
 
       {/* Tooltip Floating Card */}
       <div
+        ref={panelRef}
         role="tooltip"
-        className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
+        className={`absolute top-full mt-2 w-64 sm:w-72 max-w-[calc(100vw-1rem)] p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
           align === 'left'
             ? 'left-0'
             : align === 'right'
