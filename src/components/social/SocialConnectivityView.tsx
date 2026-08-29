@@ -13,10 +13,9 @@ import {
   ArrowRight,
   ExternalLink,
   Calendar,
-  Filter,
-  HelpCircle,
-  Info
+  Filter
 } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
 
 export const SocialConnectivityView: React.FC = () => {
   const {
@@ -29,65 +28,6 @@ export const SocialConnectivityView: React.FC = () => {
     accounts,
     userProfile
   } = useWellness();
-
-  const SocialTooltip: React.FC<{
-    icon?: 'info' | 'help';
-    content: React.ReactNode;
-    align?: 'left' | 'center' | 'right';
-    className?: string;
-  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div
-        className={`relative inline-flex items-center group ${className}`}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(prev => !prev);
-          }}
-          aria-label="More information"
-          className="p-1 rounded-full text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-        >
-          {icon === 'info' ? (
-            <Info className="w-3.5 h-3.5" />
-          ) : (
-            <HelpCircle className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Tooltip Floating Card */}
-        <div
-          role="tooltip"
-          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
-            align === 'left'
-              ? 'left-0'
-              : align === 'right'
-              ? 'right-0'
-              : 'left-1/2 -translate-x-1/2'
-          } ${
-            isOpen
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
-          } ${
-            isDarkMode
-              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
-              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
-          }`}
-        >
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
-            {content}
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   const [recipient, setRecipient] = useState('');
   const [badgeType, setBadgeType] = useState<PeerBadge['badgeType']>('lifesaver');
@@ -225,7 +165,7 @@ export const SocialConnectivityView: React.FC = () => {
           <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             Peer Appreciation & Caring Support
           </h2>
-          <SocialTooltip
+          <Tooltip accent="amber"
             icon="help"
             align="left"
             content="Celebrate peer contributions in real-time, send gratitude badges, and confidentially alert HR."
@@ -282,7 +222,7 @@ export const SocialConnectivityView: React.FC = () => {
             <span className="text-[10px] bg-rose-600 text-white font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
               100% Anonymous
             </span>
-            <SocialTooltip
+            <Tooltip accent="amber"
               icon="help"
               align="left"
               content="Noticed a colleague struggling with heavy workload or burnout? Send a gentle note so HR can reach out with supportive wellness resources."
@@ -385,7 +325,7 @@ export const SocialConnectivityView: React.FC = () => {
                 <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Send Appreciation Badge
                 </h3>
-                <SocialTooltip
+                <Tooltip accent="amber"
                   icon="help"
                   align="left"
                   content="Recognize teammates and sync peer appreciation live to the company database and feed."
@@ -506,7 +446,7 @@ export const SocialConnectivityView: React.FC = () => {
                 <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Company Gratitude & Recognition Feed
                 </h3>
-                <SocialTooltip
+                <Tooltip accent="amber"
                   icon="help"
                   align="left"
                   content="Real-time timeline of company-wide peer badges, recognition messages, and coffee vouchers."

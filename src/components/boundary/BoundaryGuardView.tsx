@@ -11,12 +11,11 @@ import {
   ShieldCheck,
   ShieldAlert,
   Sparkles,
-  CheckCircle2,
-  HelpCircle,
-  Info
+  CheckCircle2
 } from 'lucide-react';
 
 import { ElectricPlasmaShield } from './ElectricPlasmaShield';
+import { Tooltip } from '../common/Tooltip';
 
 export const BoundaryGuardView: React.FC = () => {
   const { boundaryConfig, toggleBoundaryShield, updateQuietHours, isDarkMode } = useWellness();
@@ -31,65 +30,6 @@ export const BoundaryGuardView: React.FC = () => {
       ]
     : [];
 
-  const BoundaryTooltip: React.FC<{
-    icon?: 'info' | 'help';
-    content: React.ReactNode;
-    align?: 'left' | 'center' | 'right';
-    className?: string;
-  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div
-        className={`relative inline-flex items-center group ${className}`}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(prev => !prev);
-          }}
-          aria-label="More information"
-          className="p-1 rounded-full text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-        >
-          {icon === 'info' ? (
-            <Info className="w-3.5 h-3.5" />
-          ) : (
-            <HelpCircle className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Tooltip Floating Card */}
-        <div
-          role="tooltip"
-          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
-            align === 'left'
-              ? 'left-0'
-              : align === 'right'
-              ? 'right-0'
-              : 'left-1/2 -translate-x-1/2'
-          } ${
-            isOpen
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
-          } ${
-            isDarkMode
-              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
-              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
-          }`}
-        >
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
-            {content}
-          </p>
-        </div>
-      </div>
-    );
-  };
-
   const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
     updateQuietHours(startTime, endTime);
@@ -102,7 +42,7 @@ export const BoundaryGuardView: React.FC = () => {
         <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           After-Hours Communication & Disconnect Shield
         </h2>
-        <BoundaryTooltip
+        <Tooltip
           icon="help"
           align="left"
           content="Detects late-night emails and Slack messages past designated work hours, holding non-urgent notifications to protect rest & recovery."
@@ -120,7 +60,7 @@ export const BoundaryGuardView: React.FC = () => {
               <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Shield Status
               </h3>
-              <BoundaryTooltip
+              <Tooltip
                 icon="help"
                 align="left"
                 content="Real-time status of your After-Hours Boundary Guard. When active, after-hours workplace alerts are safely held in queue."
@@ -162,7 +102,7 @@ export const BoundaryGuardView: React.FC = () => {
                 <Clock className="w-5 h-5 text-blue-500" />
                 Quiet Hours Schedule
               </h3>
-              <BoundaryTooltip
+              <Tooltip
                 icon="help"
                 align="left"
                 content="Set your personal quiet hours schedule to block evening work alerts and maintain healthy boundaries."
@@ -218,7 +158,7 @@ export const BoundaryGuardView: React.FC = () => {
                   <Mail className="w-4 h-4 text-blue-500" />
                   Delayed Messages Queue (Held for Morning)
                 </h4>
-                <BoundaryTooltip
+                <Tooltip
                   icon="help"
                   align="left"
                   content="Incoming Slack, email, and task notifications queued during quiet hours to protect your evening rest."

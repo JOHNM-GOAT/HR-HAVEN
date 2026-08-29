@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import {
   Palmtree,
@@ -11,10 +11,9 @@ import {
   Cake,
   CheckCircle2,
   Clock3,
-  Plus,
-  Info,
-  HelpCircle
+  Plus
 } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
 
 export const PtoHealthHubView: React.FC = () => {
   const {
@@ -30,62 +29,6 @@ export const PtoHealthHubView: React.FC = () => {
     r => r.userId === (userProfile.id || 'user-default') ||
       (!r.userId && userProfile.name && r.userName.toLowerCase() === userProfile.name.toLowerCase())
   );
-
-  const PtoTooltip: React.FC<{
-    icon?: 'info' | 'help';
-    content: React.ReactNode;
-    align?: 'left' | 'center' | 'right';
-    className?: string;
-  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div
-        className={`relative inline-flex items-center group ${className}`}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(prev => !prev);
-          }}
-          aria-label="More information"
-          className="p-1 rounded-full text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-        >
-          {icon === 'info' ? (
-            <Info className="w-3.5 h-3.5" />
-          ) : (
-            <HelpCircle className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Tooltip Floating Card */}
-        <div
-          role="tooltip"
-          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${align === 'left'
-              ? 'left-0'
-              : align === 'right'
-                ? 'right-0'
-                : 'left-1/2 -translate-x-1/2'
-            } ${isOpen
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
-            } ${isDarkMode
-              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
-              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
-            }`}
-        >
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
-            {content}
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -110,7 +53,7 @@ export const PtoHealthHubView: React.FC = () => {
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               PTO & Wellness Time-Off Hub
             </h2>
-            <PtoTooltip
+            <Tooltip accent="cyan"
               icon="help"
               align="left"
               content="Taking scheduled rest days directly restores energy and keeps your real-time Burnout Risk low. Plan mental health recharges, vacations, and personal time-off with auto Boundary Shield protection."
@@ -135,7 +78,7 @@ export const PtoHealthHubView: React.FC = () => {
         <div className={`enterprise-card p-5 border ${isDarkMode ? 'border-slate-800 bg-[#16181f]' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Allowance</span>
-            <PtoTooltip
+            <Tooltip accent="cyan"
               icon="help"
               align="right"
               content="Your annual standard paid time-off allotment allocated per policy year."
@@ -153,7 +96,7 @@ export const PtoHealthHubView: React.FC = () => {
         <div className={`enterprise-card p-5 border ${isDarkMode ? 'border-slate-800 bg-[#16181f]' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Used So Far</span>
-            <PtoTooltip
+            <Tooltip accent="cyan"
               icon="help"
               align="right"
               content="Total approved and logged rest days taken during the current year."
@@ -171,7 +114,7 @@ export const PtoHealthHubView: React.FC = () => {
         <div className={`enterprise-card p-5 border ${isDarkMode ? 'border-slate-800 bg-[#16181f]' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Pending Review</span>
-            <PtoTooltip
+            <Tooltip accent="cyan"
               icon="help"
               align="right"
               content="Time-off requests currently submitted and awaiting executive review or approval."
@@ -189,7 +132,7 @@ export const PtoHealthHubView: React.FC = () => {
         <div className={`enterprise-card p-5 border ${isDarkMode ? 'bg-cyan-950/20 border-cyan-800/50' : 'bg-cyan-50/70 border-cyan-200'}`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">Available to Book</span>
-            <PtoTooltip
+            <Tooltip accent="cyan"
               icon="help"
               align="right"
               content="Remaining available rest balance ready for instant scheduling and burnout prevention."

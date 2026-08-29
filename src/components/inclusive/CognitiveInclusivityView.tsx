@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { AccessibilitySettings } from '../../types/wellness';
 import {
@@ -9,11 +9,10 @@ import {
   Volume2,
   Play,
   Pause,
-  RotateCcw,
-  HelpCircle,
-  Info
+  RotateCcw
 } from 'lucide-react';
 import { CrystalWaveTimer } from '../focus/CrystalWaveTimer';
+import { Tooltip } from '../common/Tooltip';
 
 export const CognitiveInclusivityView: React.FC = () => {
   const {
@@ -33,65 +32,6 @@ export const CognitiveInclusivityView: React.FC = () => {
     isDarkMode
   } = useWellness();
 
-  const FocusTooltip: React.FC<{
-    icon?: 'info' | 'help';
-    content: React.ReactNode;
-    align?: 'left' | 'center' | 'right';
-    className?: string;
-  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div
-        className={`relative inline-flex items-center group ${className}`}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(prev => !prev);
-          }}
-          aria-label="More information"
-          className="p-1 rounded-full text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-        >
-          {icon === 'info' ? (
-            <Info className="w-3.5 h-3.5" />
-          ) : (
-            <HelpCircle className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Tooltip Floating Card */}
-        <div
-          role="tooltip"
-          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
-            align === 'left'
-              ? 'left-0'
-              : align === 'right'
-              ? 'right-0'
-              : 'left-1/2 -translate-x-1/2'
-          } ${
-            isOpen
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
-          } ${
-            isDarkMode
-              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
-              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
-          }`}
-        >
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
-            {content}
-          </p>
-        </div>
-      </div>
-    );
-  };
-
   const soundOptions: { id: AccessibilitySettings['ambientSound']; label: string; icon: string }[] = [
     { id: 'none', label: 'Mute', icon: '🔇' },
     { id: 'rain', label: 'Gentle Rain', icon: '🌧️' },
@@ -107,7 +47,7 @@ export const CognitiveInclusivityView: React.FC = () => {
         <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           Adaptive Focus Mode & Accessibility Controls
         </h2>
-        <FocusTooltip
+        <Tooltip
           icon="help"
           align="left"
           content="Customize your sensory environment with dyslexia-friendly typography, high-contrast themes, notification batching digests, soothing ambient soundscapes, and integrated Pomodoro deep work cycles."
@@ -123,7 +63,7 @@ export const CognitiveInclusivityView: React.FC = () => {
                 <Sliders className="w-5 h-5 text-blue-600" />
                 Workspace Accessibility & Neurodivergent Adaptations
               </h3>
-              <FocusTooltip
+              <Tooltip
                 icon="help"
                 align="left"
                 content="Toggle sensory and neurodivergent accessibility modes to optimize readability and reduce cognitive load."
@@ -297,7 +237,7 @@ export const CognitiveInclusivityView: React.FC = () => {
               <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Pomodoro Focus Timer
               </h3>
-              <FocusTooltip
+              <Tooltip
                 icon="help"
                 align="center"
                 content="Structured 25-minute deep focus intervals followed by 5-minute restorative breaks to sustain productive flow."

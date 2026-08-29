@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { MoodHistoryScrollWheel } from './MoodHistoryScrollWheel';
+import { Tooltip } from '../common/Tooltip';
 import {
   BrainCircuit,
   Sparkles,
@@ -10,73 +11,12 @@ import {
   Bot,
   User,
   Smile,
-  Lock,
-  HelpCircle,
-  Info
+  Lock
 } from 'lucide-react';
 
 export const MentalWellbeingView: React.FC = () => {
   const { chatMessages, sendCoachMessage, isDarkMode } = useWellness();
   const [inputText, setInputText] = useState('');
-
-  const MentalTooltip: React.FC<{
-    icon?: 'info' | 'help';
-    content: React.ReactNode;
-    align?: 'left' | 'center' | 'right';
-    className?: string;
-  }> = ({ icon = 'help', content, align = 'center', className = '' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div
-        className={`relative inline-flex items-center group ${className}`}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(prev => !prev);
-          }}
-          aria-label="More information"
-          className="p-1 rounded-full text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-        >
-          {icon === 'info' ? (
-            <Info className="w-3.5 h-3.5" />
-          ) : (
-            <HelpCircle className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Tooltip Floating Card */}
-        <div
-          role="tooltip"
-          className={`absolute top-full mt-2 w-64 sm:w-72 p-3.5 rounded-2xl border shadow-2xl z-40 text-left transition-all duration-200 transform origin-top ${
-            align === 'left'
-              ? 'left-0'
-              : align === 'right'
-              ? 'right-0'
-              : 'left-1/2 -translate-x-1/2'
-          } ${
-            isOpen
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
-          } ${
-            isDarkMode
-              ? 'bg-[#181a24]/95 backdrop-blur-md border-[#2d3242] text-slate-200 shadow-black/80'
-              : 'bg-white/95 backdrop-blur-md border-slate-200 text-slate-700 shadow-slate-200/80'
-          }`}
-        >
-          <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 font-normal">
-            {content}
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +39,7 @@ export const MentalWellbeingView: React.FC = () => {
         <h2 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           AI Wellness Coach & Mood Check-In Log
         </h2>
-        <MentalTooltip
+        <Tooltip
           icon="help"
           align="left"
           content="Consult with your AI Haven Wellness Coach for proactive workplace recovery advice, and record daily mood & energy check-ins."
@@ -121,7 +61,7 @@ export const MentalWellbeingView: React.FC = () => {
                   AI Haven Wellness Coach
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 </h3>
-                <MentalTooltip
+                <Tooltip
                   icon="help"
                   align="left"
                   content="Personalized conversational wellness guidance providing restorative strategies based on your work patterns."

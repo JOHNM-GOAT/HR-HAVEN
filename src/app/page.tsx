@@ -24,7 +24,7 @@ import { SettingsView } from '../components/settings/SettingsView';
 import { PomodoroOverlay } from '../components/focus/PomodoroOverlay';
 import { WellnessReminderToast } from '../components/health/WellnessReminderToast';
 import { PtoRequestModal } from '../components/pto/PtoRequestModal';
-import { AttendanceCalendarModal } from '../components/dashboard/AttendanceCalendarModal';
+import { AttendanceCalendar } from '../components/dashboard/AttendanceCalendar';
 import { TopNavigationProgress } from '../components/common/TopNavigationProgress';
 import { PageTransition } from '../components/common/PageTransition';
 import { ViewSkeleton } from '../components/common/ViewSkeleton';
@@ -145,7 +145,7 @@ export default function Home() {
       <ExerciseModal />
       <PomodoroOverlay />
       <PtoRequestModal />
-      <AttendanceCalendarModal />
+      <AttendanceCalendar variant="modal" />
     </div>
   );
 }
