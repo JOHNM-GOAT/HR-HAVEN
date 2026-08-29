@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { Bell, X, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, Sparkles } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 
 export const NotificationsBell: React.FC = () => {
   const {
@@ -233,13 +234,13 @@ export const NotificationsBell: React.FC = () => {
 
             <div className="space-y-2.5 my-3 max-h-72 overflow-y-auto pr-0.5">
               {notificationsList.length === 0 ? (
-                <div className="py-8 px-4 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center text-2xl mb-2.5">
-                    ✨
-                  </div>
-                  <p className="text-xs font-black text-slate-800 dark:text-slate-200">All caught up!</p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">No active notifications or alerts</p>
-                </div>
+                <EmptyState
+                  icon={Sparkles}
+                  iconAccent="blue"
+                  size="sm"
+                  title="All caught up!"
+                  description="No active notifications or alerts"
+                />
               ) : (
                 notificationsList.map(item => (
                   <div

@@ -25,8 +25,11 @@ import {
   Home,
   Cake,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Inbox
 } from 'lucide-react';
+import { StatusChip } from '../common/StatusChip';
+import { EmptyState } from '../common/EmptyState';
 
 export const HrExecutiveView: React.FC = () => {
   const {
@@ -456,13 +459,11 @@ export const HrExecutiveView: React.FC = () => {
         {/* Live Attendance Shift Records List */}
         <div className="space-y-3">
           {teamShifts.filter(s => shiftFilter === 'all' || s.status === shiftFilter).length === 0 ? (
-            <div className="p-8 text-center border rounded-2xl border-dashed border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {shiftFilter === 'active'
-                  ? 'No employees are currently clocked in.'
-                  : 'No attendance logs recorded yet.'}
-              </p>
-            </div>
+            <EmptyState
+              icon={Clock}
+              size="sm"
+              title={shiftFilter === 'active' ? 'No employees are currently clocked in.' : 'No attendance logs recorded yet.'}
+            />
           ) : (
             <div className="space-y-2.5">
               {teamShifts
@@ -567,9 +568,7 @@ export const HrExecutiveView: React.FC = () => {
         {/* Requests List */}
         <div className="space-y-3">
           {ptoRequests.length === 0 ? (
-            <div className="p-8 text-center border rounded-2xl border-dashed border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">No team leave requests recorded.</p>
-            </div>
+            <EmptyState icon={Inbox} size="sm" title="No team leave requests recorded." />
           ) : (
             <div className="space-y-3">
               {ptoRequests.map(req => {
@@ -653,14 +652,9 @@ export const HrExecutiveView: React.FC = () => {
                           </button>
                         </>
                       ) : req.status === 'approved' ? (
-                        <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          <span>{req.autoApproved ? 'Auto-Approved' : 'Approved'}</span>
-                        </span>
+                        <StatusChip status="approved" size="md" label={req.autoApproved ? 'Auto-Approved' : 'Approved'} />
                       ) : (
-                        <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                          {req.status.toUpperCase()}
-                        </span>
+                        <StatusChip status={req.status} size="md" />
                       )}
                     </div>
                   </div>
@@ -780,16 +774,12 @@ export const HrExecutiveView: React.FC = () => {
             {/* Scrollable Notification Cards List */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
               {filteredNotifications.length === 0 ? (
-                <div className={`text-center py-16 border border-dashed rounded-2xl ${isDarkMode ? 'border-slate-800' : 'border-slate-200'
-                  }`}>
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
-                  <p className={`text-sm font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    All caring alerts addressed
-                  </p>
-                  <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                    No pending teammate wellness flags in this filter.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={CheckCircle2}
+                  iconAccent="emerald"
+                  title="All caring alerts addressed"
+                  description="No pending teammate wellness flags in this filter."
+                />
               ) : (
                 filteredNotifications.map(alert => (
                   <div

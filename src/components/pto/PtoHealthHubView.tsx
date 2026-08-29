@@ -9,11 +9,11 @@ import {
   Stethoscope,
   Home,
   Cake,
-  CheckCircle2,
-  Clock3,
   Plus
 } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
+import { StatusChip } from '../common/StatusChip';
+import { EmptyState } from '../common/EmptyState';
 
 export const PtoHealthHubView: React.FC = () => {
   const {
@@ -157,20 +157,15 @@ export const PtoHealthHubView: React.FC = () => {
         </div>
 
         {myPtoRequests.length === 0 ? (
-          <div className="py-12 px-4 text-center border-2 border-dashed rounded-3xl border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center">
-
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No time-off requests yet</h4>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
-              Ready for a recharge? Click the button below to submit a vacation, mental health day, or personal leave request.
-            </p>
-            <button
-              onClick={() => setIsPtoModalOpen(true)}
-              className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Submit First Request</span>
-            </button>
-          </div>
+          <EmptyState
+            icon={Palmtree}
+            iconAccent="blue"
+            title="No time-off requests yet"
+            description="Ready for a recharge? Click the button below to submit a vacation, mental health day, or personal leave request."
+            ctaLabel="Submit First Request"
+            ctaIcon={Plus}
+            onCta={() => setIsPtoModalOpen(true)}
+          />
         ) : (
           <div className="space-y-3">
             {myPtoRequests.map(req => {
@@ -234,16 +229,10 @@ export const PtoHealthHubView: React.FC = () => {
 
                   <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
                     {req.status === 'approved' ? (
-                      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        {req.autoApproved ? 'Auto-Approved' : 'Approved'}
-                      </span>
+                      <StatusChip status="approved" label={req.autoApproved ? 'Auto-Approved' : 'Approved'} />
                     ) : req.status === 'pending' ? (
                       <div className="flex items-center gap-2.5">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                          <Clock3 className="w-3.5 h-3.5 text-amber-500" />
-                          Pending Review
-                        </span>
+                        <StatusChip status="pending" label="Pending Review" />
                         <button
                           onClick={() => cancelPtoRequest(req.id)}
                           className="text-[11px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer"
@@ -252,9 +241,7 @@ export const PtoHealthHubView: React.FC = () => {
                         </button>
                       </div>
                     ) : (
-                      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                        {req.status.toUpperCase()}
-                      </span>
+                      <StatusChip status={req.status} />
                     )}
                   </div>
                 </div>

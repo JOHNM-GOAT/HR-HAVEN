@@ -16,6 +16,7 @@ import {
   Filter
 } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
+import { EmptyState } from '../common/EmptyState';
 
 export const SocialConnectivityView: React.FC = () => {
   const {
@@ -513,29 +514,31 @@ export const SocialConnectivityView: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto space-y-3.5 pr-1.5">
             {badges.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-3">
-                  <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" />
-                </div>
-                <h4 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  No Peer Appreciations Yet
-                </h4>
-                <p className={`text-xs max-w-sm mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Be the first to recognize a colleague! Use the form on the left to send an appreciation badge.
-                </p>
-              </div>
+              <EmptyState
+                icon={Sparkles}
+                iconAccent="amber"
+                title="No Peer Appreciations Yet"
+                description="Be the first to recognize a colleague! Use the form on the left to send an appreciation badge."
+              />
             ) : filteredBadges.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-3">
-                  <Award className="w-7 h-7 text-amber-500" />
-                </div>
-                <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  No recognitions found for this timeframe
-                </h4>
-                <p className={`text-xs max-w-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Try switching to <button onClick={() => { setDateFilter('all'); setActiveFilter('all'); }} className="text-amber-500 underline font-bold cursor-pointer">All Time</button> or send a new badge!
-                </p>
-              </div>
+              <EmptyState
+                icon={Award}
+                iconAccent="amber"
+                size="sm"
+                title="No recognitions found for this timeframe"
+                description={
+                  <>
+                    Try switching to{' '}
+                    <button
+                      onClick={() => { setDateFilter('all'); setActiveFilter('all'); }}
+                      className="text-amber-500 underline font-bold cursor-pointer"
+                    >
+                      All Time
+                    </button>{' '}
+                    or send a new badge!
+                  </>
+                }
+              />
             ) : (
               filteredBadges.map(badge => (
                 <div

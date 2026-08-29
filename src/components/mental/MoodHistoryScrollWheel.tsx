@@ -13,6 +13,7 @@ import {
   Flame,
   Clock
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 
 interface MoodOption {
   type: MoodType;
@@ -233,21 +234,15 @@ export const MoodHistoryScrollWheel: React.FC = () => {
         {viewMode === 'history' && (
           <>
             {filteredLogs.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center p-6 text-center border border-dashed rounded-2xl border-slate-200 dark:border-slate-800">
-                <Smile className="w-10 h-10 text-slate-400 mb-2" />
-                <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  No mood entries found
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5 max-w-[200px]">
-                  {activeFilter === 'all' ? 'Log your daily check-in to track energy and wellbeing.' : 'No entries matching this filter.'}
-                </p>
-                <button
-                  onClick={() => setViewMode('quick_log')}
-                  className="mt-3 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  + Log First Mood
-                </button>
-              </div>
+              <EmptyState
+                icon={Smile}
+                size="sm"
+                title="No mood entries found"
+                description={activeFilter === 'all' ? 'Log your daily check-in to track energy and wellbeing.' : 'No entries matching this filter.'}
+                ctaLabel="Log First Mood"
+                ctaIcon={Plus}
+                onCta={() => setViewMode('quick_log')}
+              />
             ) : (
               filteredLogs.map(log => (
                 <div
