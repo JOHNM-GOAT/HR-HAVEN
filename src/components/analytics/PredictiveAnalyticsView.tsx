@@ -66,13 +66,9 @@ export const PredictiveAnalyticsView: React.FC = () => {
 
   const afterHoursCount = burnoutMetrics.afterHoursActivityCount || 0;
 
-  // Dynamic Risk Score calculation:
-  // Base 0 + Overtime weight (5 pts per OT hour) + Meeting excess weight (4 pts per hour over benchmark)
-  const computedScore = Math.min(100, Math.round(
-    (totalWeeklyOvertimeHours * 5) + Math.max(0, meetingHours - meetingBenchmark) * 4
-  ));
-  const dynamicRiskLevel = computedScore <= 25 ? 'low' : computedScore <= 50 ? 'normal' : computedScore <= 75 ? 'moderate' : 'high';
-  const riskConfig = getBurnoutRiskConfig(dynamicRiskLevel);
+  // Single source of truth: same score & level driving the Dashboard's Burnout Risk Gauge.
+  const computedScore = burnoutMetrics.overallScore;
+  const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
 
   return (
     <div className="space-y-6">

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { Tooltip } from '../common/Tooltip';
+import { getLateMinutes, formatLateDuration } from '../../types/wellness';
 import {
   Calendar,
   ChevronLeft,
@@ -17,32 +18,6 @@ const MONTH_NAMES = [
 ];
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const getLateMinutes = (clockInStr?: string | null): number => {
-  if (!clockInStr) return 0;
-  const match = clockInStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-  if (!match) return 0;
-  let hour = parseInt(match[1], 10);
-  const minute = parseInt(match[2], 10);
-  const period = (match[3] || '').toUpperCase();
-
-  if (period === 'PM' && hour < 12) hour += 12;
-  if (period === 'AM' && hour === 12) hour = 0;
-
-  const clockInMinutes = hour * 60 + minute;
-  const standardStartMinutes = 9 * 60; // 9:00 AM standard working time
-
-  return clockInMinutes > standardStartMinutes ? clockInMinutes - standardStartMinutes : 0;
-};
-
-const formatLateDuration = (totalMinutes: number): string => {
-  if (totalMinutes <= 0) return '0h 0m';
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h 0m`;
-  return `0h ${m}m`;
-};
 
 export const AttendanceCalendar: React.FC<{ variant: 'inline' | 'modal' }> = ({ variant }) => {
   const {

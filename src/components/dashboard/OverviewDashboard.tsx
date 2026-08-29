@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { MoodType, getBurnoutRiskConfig } from '../../types/wellness';
+import { MoodType, getBurnoutRiskConfig, getLateMinutes, formatLateDuration } from '../../types/wellness';
 import { PolarBearEmoji } from '../common/PolarBearEmoji';
 import { Tooltip } from '../common/Tooltip';
 import { NotificationsBell } from './NotificationsBell';
@@ -15,7 +15,12 @@ import {
   Clock,
   Zap,
   Moon,
-  RotateCcw
+  RotateCcw,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 
 export const OverviewDashboard: React.FC = () => {
@@ -64,6 +69,23 @@ export const OverviewDashboard: React.FC = () => {
     },
     [isCoolingDown, addMoodLog]
   );
+
+  // Daily reset: only count/display mood check-ins logged today (calendar-day boundary,
+  // same convention as the workday shift & hydration resets). History is preserved in
+  // moodLogs / localStorage — this is a display-time filter, not a data wipe.
+  const isSameLocalDay = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  };
+  const todaysMoodLogs = moodLogs.filter(log => isSameLocalDay(log.createdAt));
+
+  const trendConfig = {
+    improving: { icon: TrendingDown, label: 'Improving', classes: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60' },
+    worsening: { icon: TrendingUp, label: 'Worsening', classes: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60' },
+    stable: { icon: Minus, label: 'Stable', classes: 'text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700' }
+  }[burnoutMetrics.trend];
 
   const moodOptions: { type: MoodType; emoji: string; label: string; color: string }[] = [
     { type: 'thriving', emoji: '🤩', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
@@ -138,6 +160,11 @@ export const OverviewDashboard: React.FC = () => {
           const standardShiftSeconds = 8 * 3600; // 8 hours target
           const shiftProgress = Math.min(100, Math.round((workShift.totalWorkedSeconds / standardShiftSeconds) * 100));
 
+          // Late = clocked in after 9:00 AM. workShift resets to a fresh, un-clocked-in
+          // state each new calendar day, so this is naturally re-evaluated daily.
+          const lateMinutes = getLateMinutes(workShift.clockInTime);
+          const isLate = lateMinutes > 0;
+
           const formatTimer = (totalSecs: number) => {
             const h = Math.floor(totalSecs / 3600);
             const m = Math.floor((totalSecs % 3600) / 60);
@@ -207,13 +234,23 @@ export const OverviewDashboard: React.FC = () => {
                       }
                     />
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    workShift.isClockedIn
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
-                  }`}>
-                    {workShift.isClockedIn ? '● Active' : '○ Off Duty'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isLate && (
+                      <span
+                        title={`Clocked in ${formatLateDuration(lateMinutes)} after the 9:00 AM standard start`}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                      >
+                        ⏰ Late {formatLateDuration(lateMinutes)}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      workShift.isClockedIn
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                    }`}>
+                      {workShift.isClockedIn ? '● Active' : '○ Off Duty'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* 9:00 AM – 6:00 PM Work Schedule & 12:00 PM – 1:00 PM Lunch Break Header Strip */}
@@ -405,6 +442,39 @@ export const OverviewDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Trend + Risk Factors (live-computed, same source as AI Burnout Predictor page) */}
+            <div className="space-y-2">
+              <div className={`flex items-center justify-between px-3 py-2 rounded-xl border ${trendConfig.classes}`}>
+                <span className="flex items-center gap-1.5 text-xs font-bold">
+                  <trendConfig.icon className="w-3.5 h-3.5" />
+                  {trendConfig.label}
+                </span>
+                <span className="text-[10px] font-semibold opacity-80">7-day trend</span>
+              </div>
+
+              {burnoutMetrics.riskFactors.length === 0 ? (
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${isDarkMode ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-emerald-50/70 border-emerald-200'}`}>
+                  <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">No risk factors detected — keep it up!</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {burnoutMetrics.riskFactors.slice(0, 2).map((factor, i) => (
+                    <div key={i} className={`flex items-start gap-2 px-3 py-2 rounded-xl border ${isDarkMode ? 'bg-amber-950/20 border-amber-800/40' : 'bg-amber-50/70 border-amber-200'}`}>
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 leading-snug">{factor}</span>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setActiveTab('analytics')}
+                    className={`w-full text-center text-[10px] font-bold py-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'text-blue-400 hover:bg-blue-950/30' : 'text-blue-600 hover:bg-blue-50'}`}
+                  >
+                    {burnoutMetrics.riskFactors.length > 2 ? `+${burnoutMetrics.riskFactors.length - 2} more — ` : ''}View Full Analysis
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -435,7 +505,7 @@ export const OverviewDashboard: React.FC = () => {
                 />
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                {moodLogs.length > 0 ? `${moodLogs.length} logged` : 'Quick Check'}
+                {todaysMoodLogs.length > 0 ? `${todaysMoodLogs.length} logged today` : 'Quick Check'}
               </span>
             </div>
 
@@ -484,6 +554,44 @@ export const OverviewDashboard: React.FC = () => {
                   </span>
                 </button>
               ))}
+            </div>
+
+            {/* Today's Check-Ins Log (auto-resets to empty each new calendar day) */}
+            <div className={`pt-3 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Today&apos;s Check-Ins
+                </span>
+                <span className={`text-[10px] font-semibold ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Resets daily
+                </span>
+              </div>
+
+              {todaysMoodLogs.length === 0 ? (
+                <div className={`px-3 py-3 rounded-xl border border-dashed text-center ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
+                  <span className="text-[11px] font-semibold">No check-ins yet today — how are you feeling?</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  {todaysMoodLogs.map(log => {
+                    const opt = moodOptions.find(o => o.type === log.mood);
+                    return (
+                      <div
+                        key={log.id}
+                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg ${isDarkMode ? 'bg-[#1a1c22]' : 'bg-slate-50'}`}
+                      >
+                        <PolarBearEmoji mood={log.mood} size={18} />
+                        <span className={`text-[11px] font-bold flex-1 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                          {opt?.label || log.mood}
+                        </span>
+                        <span className={`text-[10px] font-semibold ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {log.timestamp.replace('Today, ', '')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
