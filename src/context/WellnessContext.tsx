@@ -188,6 +188,23 @@ const getUserStorageKey = (email?: string, key: string = '') => {
   return `axionhr_${clean}_${key}`;
 };
 
+const getRoleJobTitle = (role: UserRole): string => {
+  switch (role) {
+    case 'admin':
+      return 'System Administrator';
+    case 'hr_manager':
+      return 'HR Executive Manager';
+    default:
+      return 'Employee';
+  }
+};
+
+const getRoleEmployeeId = (role: UserRole, accountId: string): string => {
+  const prefix = role === 'admin' ? 'AX-ADMIN' : role === 'hr_manager' ? 'AX-HR' : 'AX-EMP';
+  const suffix = (accountId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '01';
+  return `${prefix}-${suffix}`;
+};
+
 const getAccountInitialState = (email: string, role: UserRole, name?: string) => {
   const cleanEmail = (email || '').toLowerCase().trim();
   const today = getTodayDateStr();
@@ -550,8 +567,11 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (savedProfileStr) {
             const parsedProfile = JSON.parse(savedProfileStr);
             if (parsedProfile && typeof parsedProfile === 'object') {
+              const effectiveRole: UserRole = parsedProfile.role || savedRole;
+              parsedProfile.jobTitle = getRoleJobTitle(effectiveRole);
+              parsedProfile.employeeId = getRoleEmployeeId(effectiveRole, parsedProfile.id);
               setUserProfile(parsedProfile);
-              const personal = loadPersonalUserData(parsedProfile.email, parsedProfile.role || savedRole, parsedProfile.name);
+              const personal = loadPersonalUserData(parsedProfile.email, effectiveRole, parsedProfile.name);
               setWorkShift(personal.shift);
               setWaterCups(personal.water);
               setMoodLogs(personal.moods);
@@ -1036,13 +1056,17 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let updatedProfile: UserProfile = userProfile;
 
     if (accountDetails) {
+      const resolvedId = accountDetails.id || userProfile.id;
+      const resolvedRole = (accountDetails.role as UserRole) || role;
       updatedProfile = {
         ...userProfile,
-        id: accountDetails.id || userProfile.id,
+        id: resolvedId,
         name: accountDetails.name || userProfile.name,
         email: accountDetails.email || userProfile.email,
-        role: (accountDetails.role as UserRole) || role,
+        role: resolvedRole,
         department: accountDetails.department || userProfile.department,
+        jobTitle: getRoleJobTitle(resolvedRole),
+        employeeId: getRoleEmployeeId(resolvedRole, resolvedId),
         avatarUrl: accountDetails.avatarUrl || userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
       };
       setUserProfile(updatedProfile);
@@ -1056,6 +1080,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           email: matchingAccount.email,
           role: matchingAccount.role,
           department: matchingAccount.department,
+          jobTitle: getRoleJobTitle(matchingAccount.role),
+          employeeId: getRoleEmployeeId(matchingAccount.role, matchingAccount.id),
           avatarUrl: matchingAccount.avatarUrl || userProfile.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
         };
         setUserProfile(updatedProfile);
