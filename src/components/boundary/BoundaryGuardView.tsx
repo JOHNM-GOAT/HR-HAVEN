@@ -6,29 +6,32 @@ import {
   Moon,
   Clock,
   Mail,
-  BellOff,
-  Bell,
-  ShieldCheck,
-  ShieldAlert,
-  Sparkles,
-  CheckCircle2
+  Inbox,
+  Send,
+  ShieldCheck
 } from 'lucide-react';
 
 import { ElectricPlasmaShield } from './ElectricPlasmaShield';
 import { Tooltip } from '../common/Tooltip';
+import { EmptyState } from '../common/EmptyState';
+import { formatQuietHourLabel } from '../../types/wellness';
 
 export const BoundaryGuardView: React.FC = () => {
-  const { boundaryConfig, toggleBoundaryShield, updateQuietHours, isDarkMode } = useWellness();
+  const {
+    boundaryConfig,
+    toggleBoundaryShield,
+    updateQuietHours,
+    isDarkMode,
+    heldNotifications,
+    isQuietHoursActive,
+    isShieldHolding,
+    releaseHeldNotifications
+  } = useWellness();
   const [startTime, setStartTime] = useState(boundaryConfig.quietHoursStart);
   const [endTime, setEndTime] = useState(boundaryConfig.quietHoursEnd);
 
-  const heldMessages: { id: string; source: string; heldSince: string }[] = boundaryConfig.activeShield
-    ? [
-        { id: 'held-1', source: 'Slack: #engineering-sync (3 messages)', heldSince: '8:14 PM' },
-        { id: 'held-2', source: 'Email: Q3 Release Roadmap Update', heldSince: '9:02 PM' },
-        { id: 'held-3', source: 'Jira: Ticket #AX-204 Assignee update', heldSince: '10:15 PM' }
-      ]
-    : [];
+  const formatHeldSince = (heldAt: number) =>
+    new Date(heldAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,17 +71,21 @@ export const BoundaryGuardView: React.FC = () => {
             </div>
             <button
               onClick={toggleBoundaryShield}
-              className={`text-xs font-bold px-3 py-1 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${boundaryConfig.activeShield
+              className={`text-xs font-bold px-3 py-1 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${isShieldHolding
                 ? isDarkMode
-                  ? 'bg-blue-950/60 text-blue-300 border-blue-800'
-                  : 'bg-blue-50 text-blue-700 border-blue-200'
-                : isDarkMode
-                  ? 'bg-slate-800 text-slate-400 border-slate-700'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : boundaryConfig.activeShield
+                  ? isDarkMode
+                    ? 'bg-blue-950/60 text-blue-300 border-blue-800'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                  : isDarkMode
+                    ? 'bg-slate-800 text-slate-400 border-slate-700'
+                    : 'bg-slate-100 text-slate-500 border-slate-200'
                 }`}
               title="Click to toggle Shield status"
             >
-              {boundaryConfig.activeShield ? 'ACTIVE' : 'PAUSED'}
+              {isShieldHolding ? 'HOLDING' : boundaryConfig.activeShield ? 'ARMED' : 'PAUSED'}
             </button>
           </div>
 
@@ -86,8 +93,6 @@ export const BoundaryGuardView: React.FC = () => {
           <div className="my-3">
             <ElectricPlasmaShield />
           </div>
-
-          {/* Bottom Rounded Pill Action Button matching Screenshot */}
 
         </div>
 
@@ -161,31 +166,62 @@ export const BoundaryGuardView: React.FC = () => {
                 <Tooltip
                   icon="help"
                   align="left"
-                  content="Incoming Slack, email, and task notifications queued during quiet hours to protect your evening rest."
+                  content="In-app wellness and activity alerts intercepted during your quiet hours. Urgent items (clock-in/out, security, and account changes) are never held."
                 />
               </div>
-              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-blue-950/60 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'
-                }`}>
-                {heldMessages.length} Held
-              </span>
+              <div className="flex items-center gap-2">
+                {heldNotifications.length > 0 && (
+                  <button
+                    onClick={releaseHeldNotifications}
+                    className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer active:scale-95 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                    title="Deliver all held notifications now"
+                  >
+                    <Send className="w-3 h-3" />
+                    Release Now
+                  </button>
+                )}
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-blue-950/60 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}>
+                  {heldNotifications.length} Held
+                </span>
+              </div>
             </div>
 
-            <div className={`p-4 rounded-xl border space-y-2 ${isDarkMode ? 'bg-[#1a1c22] border-[#2e323d]' : 'bg-slate-50 border-slate-200'
-              }`}>
-              {heldMessages.map(msg => (
-                <div key={msg.id} className="flex items-center justify-between text-xs">
-                  <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                    {msg.source}
-                  </span>
-                  <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Held since {msg.heldSince}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className={`text-[11px] mt-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              All held notifications will automatically flush to your inbox tomorrow at {boundaryConfig.quietHoursEnd}.
-            </p>
+            {heldNotifications.length === 0 ? (
+              <EmptyState
+                icon={isShieldHolding ? ShieldCheck : Inbox}
+                iconAccent={isShieldHolding ? 'emerald' : 'slate'}
+                size="sm"
+                title={isShieldHolding ? 'Nothing held yet' : 'Queue is empty'}
+                description={
+                  isShieldHolding
+                    ? 'Quiet hours are active — any non-urgent alert from now on waits here.'
+                    : boundaryConfig.activeShield
+                      ? `Alerts will start collecting here at ${formatQuietHourLabel(boundaryConfig.quietHoursStart)}.`
+                      : 'Enable the shield to start holding non-urgent alerts during quiet hours.'
+                }
+              />
+            ) : (
+              <div className={`p-4 rounded-xl border space-y-2 max-h-56 overflow-y-auto ${isDarkMode ? 'bg-[#1a1c22] border-[#2e323d]' : 'bg-slate-50 border-slate-200'
+                }`}>
+                {heldNotifications.map(msg => (
+                  <div key={msg.id} className="flex items-start justify-between gap-3 text-xs">
+                    <span className={`font-semibold leading-snug ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {msg.message}
+                    </span>
+                    <span className={`text-[10px] font-medium shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Held {formatHeldSince(msg.heldAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {heldNotifications.length > 0 && (
+              <p className={`text-[11px] mt-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                These deliver automatically at {formatQuietHourLabel(boundaryConfig.quietHoursEnd)}, or release them now.
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -170,9 +170,52 @@ export interface BoundaryGuardConfig {
   activeShield: boolean;
   quietHoursStart: string; // e.g. "18:00"
   quietHoursEnd: string;   // e.g. "08:00"
-  delayedMessagesCount: number;
   autoReplyMessage: string;
 }
+
+// A notification the Boundary Shield intercepted during quiet hours.
+export interface HeldNotification {
+  id: string;
+  message: string;
+  heldAt: number; // epoch ms
+}
+
+const parseTimeToMinutes = (time?: string): number | null => {
+  const match = (time || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+};
+
+/**
+ * Quiet hours normally wrap past midnight (e.g. 18:30 -> 08:30), so a plain
+ * start <= now < end comparison would never match. Handles both directions.
+ */
+export const isWithinQuietHours = (start: string, end: string, now: Date = new Date()): boolean => {
+  const startMinutes = parseTimeToMinutes(start);
+  const endMinutes = parseTimeToMinutes(end);
+  if (startMinutes === null || endMinutes === null) return false;
+  if (startMinutes === endMinutes) return false; // zero-length window
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  return startMinutes < endMinutes
+    ? currentMinutes >= startMinutes && currentMinutes < endMinutes  // same-day window
+    : currentMinutes >= startMinutes || currentMinutes < endMinutes; // wraps past midnight
+};
+
+/** Formats "18:30" as "6:30 PM" for display. */
+export const formatQuietHourLabel = (time: string): string => {
+  const totalMinutes = parseTimeToMinutes(time);
+  if (totalMinutes === null) return time;
+  const hours24 = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+};
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 

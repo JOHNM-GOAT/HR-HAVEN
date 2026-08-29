@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
+import { formatQuietHourLabel } from '../../types/wellness';
 
 export const ElectricPlasmaShield: React.FC = () => {
-  const { boundaryConfig, toggleBoundaryShield, isDarkMode, accessibility } = useWellness();
+  const { boundaryConfig, toggleBoundaryShield, isDarkMode, accessibility, isShieldHolding } = useWellness();
   const isActive = boundaryConfig.activeShield;
   const isLight = !isDarkMode;
   const isReduced = accessibility.reducedMotion;
@@ -283,12 +284,14 @@ export const ElectricPlasmaShield: React.FC = () => {
             isDarkMode ? 'text-white' : 'text-slate-900'
           }`}
         >
-          {isActive ? 'Boundary Shield Engaged' : 'Shield Disabled'}
+          {isShieldHolding ? 'Holding Notifications' : isActive ? 'Boundary Shield Armed' : 'Shield Disabled'}
         </h4>
         <p className={`text-xs mt-1.5 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-          {isActive
-            ? `Late notifications held between ${boundaryConfig.quietHoursStart} - ${boundaryConfig.quietHoursEnd}`
-            : 'Notifications will arrive immediately anytime.'}
+          {isShieldHolding
+            ? `Non-urgent alerts queued until ${formatQuietHourLabel(boundaryConfig.quietHoursEnd)}`
+            : isActive
+              ? `Holding begins at ${formatQuietHourLabel(boundaryConfig.quietHoursStart)}`
+              : 'Notifications will arrive immediately anytime.'}
         </p>
       </div>
     </div>

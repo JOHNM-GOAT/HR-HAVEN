@@ -78,7 +78,6 @@ export const initialBoundaryConfig: BoundaryGuardConfig = {
   activeShield: false,
   quietHoursStart: '18:30',
   quietHoursEnd: '08:30',
-  delayedMessagesCount: 0,
   autoReplyMessage: 'AxionHR Haven Boundary Guard: User is currently disconnected for well-being hours. Messages will be delivered tomorrow at 8:30 AM.'
 };
 
