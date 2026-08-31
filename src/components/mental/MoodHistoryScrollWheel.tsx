@@ -130,13 +130,6 @@ export const MoodHistoryScrollWheel: React.FC = () => {
       <div className="space-y-3 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center border shadow-2xs ${
-              isDarkMode
-                ? 'bg-blue-950/60 text-blue-400 border-blue-800'
-                : 'bg-blue-50 text-blue-600 border-blue-200'
-            }`}>
-              <Smile className="w-4 h-4" />
-            </div>
             <div>
               <h3 className={`text-sm font-bold tracking-tight flex items-center gap-1.5 ${
                 isDarkMode ? 'text-white' : 'text-slate-900'

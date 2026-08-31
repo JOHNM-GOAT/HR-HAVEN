@@ -8,7 +8,6 @@ import {
   BrainCircuit,
   Sparkles,
   Send,
-  Bot,
   User,
   Smile,
   Lock
@@ -53,9 +52,6 @@ export const MentalWellbeingView: React.FC = () => {
           {/* Chat Header */}
           <div className={`flex items-center justify-between pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
-                <Bot className="w-5 h-5" />
-              </div>
               <div className="flex items-center gap-1.5">
                 <h3 className={`text-base font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   AI Haven Wellness Coach

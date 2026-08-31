@@ -39,10 +39,6 @@ export const PhysicalHealthView: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
-                <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-blue-950/60 text-blue-400 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100'
-                  }`}>
-                  <Droplet className="w-5 h-5 fill-blue-600" />
-                </div>
                 <div className="flex items-center gap-1.5">
                   <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Smart Hydration Tracker</h3>
                   <Tooltip
@@ -70,10 +66,6 @@ export const PhysicalHealthView: React.FC = () => {
           }`}>
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-rose-950/60 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-600 border-rose-100'
-                }`}>
-                <Heart className="w-5 h-5 fill-rose-600" />
-              </div>
               <div className="flex items-center gap-1.5">
                 <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Guided Micro-Breaks</h3>
                 <Tooltip

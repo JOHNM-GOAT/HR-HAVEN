@@ -25,7 +25,6 @@ import {
   RotateCcw,
   Archive,
   History,
-  AlertTriangle,
   Lock,
   Clock,
   Shield
@@ -611,9 +610,6 @@ export const AccountManagementView: React.FC = () => {
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold">
-                  <UserPlus className="w-4 h-4" />
-                </div>
                 <div>
                   <h3 className="text-base font-extrabold">Create New User Account</h3>
                   <p className="text-[11px] text-blue-100">Provision credentials & permissions</p>
@@ -974,9 +970,6 @@ export const AccountManagementView: React.FC = () => {
       {deletingAccount && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
-              <Archive className="w-6 h-6" />
-            </div>
             <h3 className="text-lg font-extrabold text-slate-900 text-center">Move to Security Recovery Vault?</h3>
             <p className="text-xs text-slate-500 mt-2 text-center leading-relaxed">
               You are deactivating the account for <strong className="text-slate-900">{deletingAccount.name}</strong> ({deletingAccount.email}).
@@ -1035,9 +1028,6 @@ export const AccountManagementView: React.FC = () => {
             {/* Drawer Header */}
             <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-extrabold tracking-tight">
@@ -1187,9 +1177,6 @@ export const AccountManagementView: React.FC = () => {
       {purgeCandidate && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
             <h3 className="text-lg font-extrabold text-slate-900">Permanently Purge Record?</h3>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
               This will permanently expunge <strong className="text-slate-900">{purgeCandidate.name}</strong> ({purgeCandidate.email}) from the Security Recovery Vault. Once purged, this record cannot be recovered.

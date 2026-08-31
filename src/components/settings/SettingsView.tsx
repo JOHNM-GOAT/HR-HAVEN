@@ -18,7 +18,6 @@ import {
   Building,
   Mail,
   Shield,
-  KeyRound,
   Sparkles,
   Save,
   CheckCircle2,
@@ -448,9 +447,6 @@ export const SettingsView: React.FC = () => {
         <div className="space-y-6">
           <form onSubmit={handlePasswordSubmit} className={`enterprise-card p-6 sm:p-7 border ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
-                <KeyRound className="w-5 h-5" />
-              </div>
               <div>
                 <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Change Account Password
