@@ -12,6 +12,7 @@ import { Menu } from 'lucide-react';
 
 import { OverviewDashboard } from '../components/dashboard/OverviewDashboard';
 import { PredictiveAnalyticsView } from '../components/analytics/PredictiveAnalyticsView';
+import { BlockersView } from '../components/blockers/BlockersView';
 import { PhysicalHealthView } from '../components/health/PhysicalHealthView';
 import { MentalWellbeingView } from '../components/mental/MentalWellbeingView';
 import { SocialConnectivityView } from '../components/social/SocialConnectivityView';
@@ -70,6 +71,8 @@ export default function Home() {
         return <OverviewDashboard />;
       case 'analytics':
         return <PredictiveAnalyticsView />;
+      case 'blockers':
+        return <BlockersView />;
       case 'physical':
         return <PhysicalHealthView />;
       case 'mental':

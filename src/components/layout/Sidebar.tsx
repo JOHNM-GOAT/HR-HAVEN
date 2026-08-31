@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useWellness, NavTab } from '../../context/WellnessContext';
+import { getBurnoutRiskConfig } from '../../types/wellness';
 import { AxionLogo } from '../common/AxionLogo';
 import {
   LayoutDashboard,
@@ -14,7 +15,8 @@ import {
   Users,
   UserCog,
   LogOut,
-  Palmtree
+  Palmtree,
+  AlertTriangle
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -27,10 +29,14 @@ export const Sidebar: React.FC = () => {
     toggleSidebar,
     userProfile,
     isDarkMode,
-    unreadHrNotificationCount
+    unreadHrNotificationCount,
+    burnoutMetrics,
+    blockers
   } = useWellness();
 
   const hrBadge = unreadHrNotificationCount > 0 ? `${unreadHrNotificationCount} Alerts` : 'HR';
+  const activeBlockerCount = blockers.filter(b => !b.resolvedAt).length;
+  const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
 
   const navSections: { title?: string; items: { id: NavTab; label: string; icon: React.ReactNode; badge?: string }[] }[] = 
     userRole === 'admin'
@@ -70,6 +76,17 @@ export const Sidebar: React.FC = () => {
               { id: 'social', label: 'Appreciations', icon: <Award className="w-5 h-5" /> },
               { id: 'inclusive', label: 'Adaptive Focus Mode', icon: <Sliders className="w-5 h-5" /> },
               { id: 'boundary', label: 'Boundary Guard', icon: <ShieldCheck className="w-5 h-5" /> }
+            ]
+          },
+          {
+            title: 'Blockers',
+            items: [
+              {
+                id: 'blockers',
+                label: 'Workflow Blockers',
+                icon: <AlertTriangle className="w-5 h-5" />,
+                badge: activeBlockerCount > 0 ? `${activeBlockerCount}` : undefined
+              }
             ]
           },
           {
@@ -158,6 +175,53 @@ export const Sidebar: React.FC = () => {
 
           {/* Section Divider */}
           <div className={`h-px mx-1 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200/80'}`} />
+
+          {/* Compact Burnout Risk Gauge — reflects the same score every other
+              view reads (burnoutMetrics.overallScore), so logging a blocker on
+              the Blockers page moves this number immediately, not just its own page. */}
+          {userRole === 'employee' && (
+            isSidebarOpen ? (
+              <button
+                onClick={() => setActiveTab('analytics')}
+                title="Open AI Burnout Predictor"
+                className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-[#20222a] border-[#2e323e] hover:border-blue-500' : 'bg-white/80 border-slate-200/80 hover:border-blue-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Burnout Risk
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${riskConfig.badgeBg}`}>
+                    {riskConfig.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg font-black leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {burnoutMetrics.overallScore}
+                  </span>
+                  <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${burnoutMetrics.overallScore}%`, backgroundColor: riskConfig.hexColor }}
+                    />
+                  </div>
+                </div>
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveTab('analytics')}
+                title={`Burnout Risk: ${burnoutMetrics.overallScore}/100 (${riskConfig.label})`}
+                className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center border cursor-pointer relative ${
+                  isDarkMode ? 'bg-[#20222a] border-[#2e323e]' : 'bg-white/80 border-slate-200/80'
+                }`}
+              >
+                <span className={`text-[13px] font-black ${riskConfig.textColor}`}>
+                  {burnoutMetrics.overallScore}
+                </span>
+              </button>
+            )
+          )}
 
           {/* Navigation Sections */}
           <div className="space-y-3">

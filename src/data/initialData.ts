@@ -11,7 +11,8 @@ import {
   HrNotification,
   DeletedUserAccount,
   PtoRequest,
-  PtoBalance
+  PtoBalance,
+  Blocker
 } from '../types/wellness';
 
 export const initialHrNotifications: HrNotification[] = [];
@@ -47,7 +48,6 @@ export const initialBurnoutMetrics: BurnoutMetrics = {
   overtimeHoursWeekly: 0,
   ptoDaysUsed: 0,
   ptoDaysRemaining: 20,
-  afterHoursActivityCount: 0,
   consecutiveWorkDays: 0,
   trend: 'stable',
   riskFactors: []
@@ -63,6 +63,8 @@ export const initialReminders: WellnessReminder[] = [
 ];
 
 export const initialBadges: PeerBadge[] = [];
+
+export const initialBlockers: Blocker[] = [];
 
 export const initialChatMessages: ChatMessage[] = [
   {

@@ -29,26 +29,30 @@ import {
   formatQuietHourLabel,
   normalizeWorkShift,
   withLiveWorkTotals,
-  computeWorkedSeconds
+  computeWorkedSeconds,
+  Blocker,
+  BlockerSeverity,
+  BLOCKER_SEVERITY_CONFIG
 } from '../types/wellness';
-import { 
-  initialBurnoutMetrics, 
-  initialMoodLogs, 
-  initialReminders, 
-  initialBadges, 
-  initialChatMessages, 
-  initialBoundaryConfig, 
+import {
+  initialBurnoutMetrics,
+  initialMoodLogs,
+  initialReminders,
+  initialBadges,
+  initialChatMessages,
+  initialBoundaryConfig,
   initialAccessibilitySettings,
   initialUserAccounts,
   initialUserProfile,
   initialHrNotifications,
   initialDeletedAccounts,
   initialPtoRequests,
-  initialPtoBalance
+  initialPtoBalance,
+  initialBlockers
 } from '../data/initialData';
 import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
 
-export type NavTab = 'dashboard' | 'analytics' | 'physical' | 'mental' | 'social' | 'inclusive' | 'boundary' | 'pto' | 'hr' | 'accounts' | 'settings';
+export type NavTab = 'dashboard' | 'analytics' | 'blockers' | 'physical' | 'mental' | 'social' | 'inclusive' | 'boundary' | 'pto' | 'hr' | 'accounts' | 'settings';
 
 export interface BatchedNotification {
   id: string;
@@ -106,7 +110,11 @@ interface WellnessContextType {
   burnoutMetrics: BurnoutMetrics;
   moodLogs: MoodLog[];
   addMoodLog: (mood: MoodType, energyLevel: number, note?: string) => void;
-  
+
+  blockers: Blocker[];
+  addBlocker: (description: string, severity: BlockerSeverity) => void;
+  resolveBlocker: (id: string) => void;
+
   reminders: WellnessReminder[];
   toggleReminder: (id: string) => void;
   activeReminderAlert: WellnessReminder | null;
@@ -233,6 +241,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
       },
       waterCups: 0,
       moodLogs: [] as MoodLog[],
+      blockers: [] as Blocker[],
       burnoutMetrics: {
         overallScore: 0,
         riskLevel: 'low' as const,
@@ -241,7 +250,6 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         overtimeHoursWeekly: 0,
         ptoDaysUsed: 0,
         ptoDaysRemaining: 20,
-        afterHoursActivityCount: 0,
         consecutiveWorkDays: 0,
         trend: 'stable' as const,
         riskFactors: []
@@ -272,6 +280,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
           createdAt: new Date().toISOString()
         }
       ],
+      blockers: [] as Blocker[],
       burnoutMetrics: {
         overallScore: 22,
         riskLevel: 'low' as const,
@@ -280,7 +289,6 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         overtimeHoursWeekly: 0,
         ptoDaysUsed: 1,
         ptoDaysRemaining: 19,
-        afterHoursActivityCount: 0,
         consecutiveWorkDays: 3,
         trend: 'improving' as const,
         riskFactors: ['Active daily HR interviews']
@@ -311,6 +319,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
           createdAt: new Date().toISOString()
         }
       ],
+      blockers: [] as Blocker[],
       burnoutMetrics: {
         overallScore: 38,
         riskLevel: 'moderate' as const,
@@ -319,7 +328,6 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         overtimeHoursWeekly: 1.5,
         ptoDaysUsed: 0,
         ptoDaysRemaining: 20,
-        afterHoursActivityCount: 2,
         consecutiveWorkDays: 4,
         trend: 'stable' as const,
         riskFactors: ['High meeting concentration', 'Sprint deadline approaching']
@@ -339,6 +347,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
     },
     waterCups: 0,
     moodLogs: [] as MoodLog[],
+    blockers: [] as Blocker[],
     burnoutMetrics: {
       overallScore: 0,
       riskLevel: 'low' as const,
@@ -347,7 +356,6 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
       overtimeHoursWeekly: 0,
       ptoDaysUsed: 0,
       ptoDaysRemaining: 20,
-      afterHoursActivityCount: 0,
       consecutiveWorkDays: 0,
       trend: 'stable' as const,
       riskFactors: []
@@ -360,6 +368,7 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
   let shift: WorkShiftState = initial.workShift;
   let water = initial.waterCups;
   let moods = initial.moodLogs;
+  let blockers = initial.blockers;
   let burnout = initial.burnoutMetrics;
   let boundary = initialBoundaryConfig;
   let held: HeldNotification[] = [];
@@ -412,6 +421,12 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
       const savedMoods = localStorage.getItem(getUserStorageKey(email, 'mood_logs'));
       if (savedMoods) moods = JSON.parse(savedMoods);
 
+      const savedBlockers = localStorage.getItem(getUserStorageKey(email, 'blockers'));
+      if (savedBlockers) {
+        const parsedBlockers = JSON.parse(savedBlockers);
+        if (Array.isArray(parsedBlockers)) blockers = parsedBlockers;
+      }
+
       // Merge over the defaults rather than trusting the stored shape — records
       // written by earlier builds can be missing fields the UI now reads
       // unguarded (trend, riskFactors), which would throw during render.
@@ -434,7 +449,7 @@ const loadPersonalUserData = (email: string, role: UserRole, name?: string) => {
   // Normalize every path, not just the restored-from-storage one: the seeded
   // accounts start clocked in, and without timing fields they would read as zero.
   // normalizeWorkShift is idempotent, so re-running it here is safe.
-  return { shift: normalizeWorkShift(shift), water, moods, burnout, boundary, held };
+  return { shift: normalizeWorkShift(shift), water, moods, blockers, burnout, boundary, held };
 };
 
 export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -460,6 +475,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const validTabs: NavTab[] = [
       'dashboard',
       'analytics',
+      'blockers',
       'physical',
       'mental',
       'social',
@@ -493,6 +509,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return initialBurnoutMetrics;
   });
   const [moodLogs, setMoodLogs] = useState<MoodLog[]>(initialMoodLogs);
+  const [blockers, setBlockers] = useState<Blocker[]>(initialBlockers);
   const [reminders, setReminders] = useState<WellnessReminder[]>(initialReminders);
   const [activeExercise, setActiveExercise] = useState<'stretch' | 'eye_rest' | 'breathwork' | null>(null);
   const [badges, setBadges] = useState<PeerBadge[]>(initialBadges);
@@ -699,6 +716,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               setWorkShift(personal.shift);
               setWaterCups(personal.water);
               setMoodLogs(personal.moods);
+              setBlockers(personal.blockers);
               setBurnoutMetrics(personal.burnout);
               setBoundaryConfig(personal.boundary);
               setHeldNotifications(personal.held);
@@ -1221,6 +1239,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setWorkShift(personal.shift);
     setWaterCups(personal.water);
     setMoodLogs(personal.moods);
+    setBlockers(personal.blockers);
     setBurnoutMetrics(personal.burnout);
     setBoundaryConfig(personal.boundary);
     setHeldNotifications(personal.held);
@@ -1238,7 +1257,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (typeof window !== 'undefined') {
       const currentPath = window.location.pathname.replace(/^\/+/, '').split('/')[0] as NavTab;
       const validTabs: NavTab[] = [
-        'dashboard', 'analytics', 'physical', 'mental', 'social', 'inclusive', 'boundary', 'pto', 'hr', 'accounts', 'settings'
+        'dashboard', 'analytics', 'blockers', 'physical', 'mental', 'social', 'inclusive', 'boundary', 'pto', 'hr', 'accounts', 'settings'
       ];
       if (validTabs.includes(currentPath)) {
         targetTab = currentPath;
@@ -1333,6 +1352,86 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ moodLog: newLog, userProfile })
     }).catch(err => console.warn('Mood database sync error:', err));
+  };
+
+  const addBlocker = (description: string, severity: BlockerSeverity) => {
+    const trimmed = description.trim();
+    if (!trimmed) return;
+
+    const weight = BLOCKER_SEVERITY_CONFIG[severity].scoreWeight;
+    const newScore = Math.min(100, Math.max(0, burnoutMetrics.overallScore + weight));
+    const actualImpact = newScore - burnoutMetrics.overallScore;
+    const newLevel = getBurnoutRiskLevel(newScore);
+
+    const newBlocker: Blocker = {
+      id: `blocker-${Date.now()}`,
+      description: trimmed,
+      severity,
+      scoreImpact: actualImpact,
+      createdAt: new Date().toISOString()
+    };
+
+    setBlockers(prev => {
+      const updated = [newBlocker, ...prev];
+      if (typeof window !== 'undefined' && userProfile.email) {
+        try {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'blockers'), JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    setBurnoutMetrics(prev => {
+      const updated: BurnoutMetrics = {
+        ...prev,
+        overallScore: newScore,
+        riskLevel: newLevel,
+        trend: actualImpact > 0 ? 'worsening' : prev.trend
+      };
+      if (typeof window !== 'undefined' && userProfile.email) {
+        try {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'burnout_metrics'), JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    setToastNotification('Blocker logged — burnout risk score updated.');
+  };
+
+  const resolveBlocker = (id: string) => {
+    const target = blockers.find(b => b.id === id);
+    if (!target || target.resolvedAt) return;
+
+    const newScore = Math.min(100, Math.max(0, burnoutMetrics.overallScore - target.scoreImpact));
+    const newLevel = getBurnoutRiskLevel(newScore);
+
+    setBlockers(prev => {
+      const updated = prev.map(b => b.id === id ? { ...b, resolvedAt: new Date().toISOString() } : b);
+      if (typeof window !== 'undefined' && userProfile.email) {
+        try {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'blockers'), JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    setBurnoutMetrics(prev => {
+      const updated: BurnoutMetrics = {
+        ...prev,
+        overallScore: newScore,
+        riskLevel: newLevel,
+        trend: target.scoreImpact > 0 ? 'improving' : prev.trend
+      };
+      if (typeof window !== 'undefined' && userProfile.email) {
+        try {
+          localStorage.setItem(getUserStorageKey(userProfile.email, 'burnout_metrics'), JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    setToastNotification('Blocker resolved — burnout risk score updated.');
   };
 
   const [activeReminderAlert, setActiveReminderAlert] = useState<WellnessReminder | null>(null);
@@ -2646,6 +2745,9 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         burnoutMetrics,
         moodLogs,
         addMoodLog,
+        blockers,
+        addBlocker,
+        resolveBlocker,
         reminders,
         toggleReminder,
         activeReminderAlert,

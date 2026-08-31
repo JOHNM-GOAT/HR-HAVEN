@@ -528,7 +528,7 @@ export const OverviewDashboard: React.FC = () => {
               <div className="flex items-center gap-1.5 min-w-0">
                 <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   <Smile className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                  Daily Mood Check-In
+                  Mood Check-In
                 </h3>
                 <Tooltip
                   icon="help"

@@ -163,11 +163,42 @@ export interface BurnoutMetrics {
   overtimeHoursWeekly: number;
   ptoDaysUsed: number;
   ptoDaysRemaining: number;
-  afterHoursActivityCount: number; // emails/messages past 7 PM
   consecutiveWorkDays: number;
   trend: 'improving' | 'stable' | 'worsening';
   riskFactors: string[];
 }
+
+export type BlockerSeverity = 'low' | 'medium' | 'high';
+
+export interface Blocker {
+  id: string;
+  description: string;
+  severity: BlockerSeverity;
+  scoreImpact: number; // burnout score points this blocker actually added when logged (clamp-aware, so resolving gives back exactly what was added)
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export const BLOCKER_SEVERITY_CONFIG: Record<BlockerSeverity, { label: string; scoreWeight: number; badgeBg: string; dotColor: string }> = {
+  low: {
+    label: 'Low Impact',
+    scoreWeight: 4,
+    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    dotColor: 'bg-blue-500'
+  },
+  medium: {
+    label: 'Medium Impact',
+    scoreWeight: 9,
+    badgeBg: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+    dotColor: 'bg-amber-500'
+  },
+  high: {
+    label: 'High Impact',
+    scoreWeight: 16,
+    badgeBg: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+    dotColor: 'bg-rose-500'
+  }
+};
 
 export type MoodType = 'thriving' | 'good' | 'okay' | 'stressed' | 'exhausted';
 
@@ -422,6 +453,7 @@ export interface PtoBalance {
 export type NavTab =
   | 'dashboard'
   | 'analytics'
+  | 'blockers'
   | 'physical'
   | 'mental'
   | 'social'

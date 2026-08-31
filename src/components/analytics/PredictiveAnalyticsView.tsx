@@ -21,7 +21,9 @@ export const PredictiveAnalyticsView: React.FC = () => {
     teamShifts,
     workShift,
     userProfile,
-    isDarkMode
+    isDarkMode,
+    blockers,
+    setActiveTab
   } = useWellness();
 
   // Dynamically compute the 7 days of the current week (Monday -> Sunday)
@@ -76,7 +78,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
     ? Math.round(((attendedDaysThisWeek - lateDaysThisWeek) / attendedDaysThisWeek) * 100)
     : 100;
 
-  const afterHoursCount = burnoutMetrics.afterHoursActivityCount || 0;
+  const activeBlockerCount = blockers.filter(b => !b.resolvedAt).length;
 
   // Single source of truth: same score & level driving the Dashboard's Burnout Risk Gauge.
   const computedScore = burnoutMetrics.overallScore;
@@ -157,33 +159,41 @@ export const PredictiveAnalyticsView: React.FC = () => {
           </div>
         </div>
 
-        {/* After-Hours Activity / Boundary Guard Telemetry */}
-        <div className={`enterprise-card p-4 border ${isDarkMode ? 'bg-[#16181f] border-slate-800' : 'bg-white border-slate-200'}`}>
+        {/* Active Blockers — real count from the Blockers page, each one currently
+            contributing to the risk score above. Replaces the old "After-Hours
+            Activity" card, which was hardcoded and never backed by real telemetry. */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('blockers')}
+          className={`enterprise-card p-4 border text-left cursor-pointer transition-all hover:shadow-md ${isDarkMode ? 'bg-[#16181f] border-slate-800' : 'bg-white border-slate-200'}`}
+        >
           <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 mb-2">
             <span className="text-xs font-semibold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> After-Hours Activity
+              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Active Blockers
             </span>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              afterHoursCount > 0
+              activeBlockerCount > 0
                 ? 'text-rose-700 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                 : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
             }`}>
-              {afterHoursCount === 0 ? 'Shielded (0)' : `${afterHoursCount} Detected`}
+              {activeBlockerCount === 0 ? 'Clear' : `${activeBlockerCount} Logged`}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className={`text-2xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              {afterHoursCount}
+              {activeBlockerCount}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">past 6:00 PM cutoff</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {activeBlockerCount === 0 ? 'nothing blocking you' : 'raising your risk score'}
+            </span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${afterHoursCount > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-              style={{ width: `${afterHoursCount === 0 ? 100 : Math.min(100, afterHoursCount * 25)}%` }}
+              className={`h-full rounded-full transition-all duration-500 ${activeBlockerCount > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+              style={{ width: `${activeBlockerCount === 0 ? 100 : Math.min(100, activeBlockerCount * 25)}%` }}
             />
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Main Telemetry Chart */}
