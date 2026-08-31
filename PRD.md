@@ -48,65 +48,76 @@ Sign-in also accepts the email's local part alone (e.g. `admin`) as a shortcut.
 - Overtime tracked as hours worked beyond the standard shift length, feeding the burnout score.
 
 ### 5.2 Burnout Predictor
-- A single 0–100 risk score (`overallScore`) with a `low` / `medium` / `high` risk level, computed from mood check-ins, worked hours, and overtime — no manual input.
+- A single 0–100 risk score (`overallScore`) with a `low` / `normal` / `moderate` / `high` risk level, moved only by two real levers: mood check-ins (each one shifts the score by a fixed amount depending on mood/energy) and active Workflow Blockers (each one adds its severity weight; resolving it gives that exact amount back, clamp-aware).
 - Weekly trend indicator (`improving` / `stable` / `worsening`).
-- A plain-language list of contributing risk factors, populated only when real factors exist (empty state shown otherwise, not a placeholder score).
-- Visualized as a ring gauge on the dashboard's Burnout Risk tile, with the trend and risk factors laid out alongside it.
+- Risk factors are computed live (`getRiskFactors`), not stored or seeded — the list is built from exactly what's currently raising the score: each active blocker (by name, with its real point value) and each of today's mood check-ins that pushed the score up, sorted highest-impact first, each with a suggested action specific to that item. Empty list renders an empty state, never a placeholder.
+- Visualized as a ring gauge on the dashboard's Burnout Risk tile and the AI Burnout Predictor page, both reading the same live-computed factor list; the page's Weekly Workload Telemetry chart also plots blockers logged per day alongside late-minutes and overtime.
 
-### 5.3 Mental & AI Coach
+### 5.3 Workflow Blockers
+- Employees log anything actively getting in the way of their work with a severity (Low / Medium / High), each with an explicit score weight (+4 / +9 / +16).
+- Logging one immediately raises the Burnout Risk score by that weight; resolving it gives back exactly what it added.
+- Its own sidebar section, separate from the Six Wellness Pillars, with an unresolved-count badge.
+- Surfaced everywhere the score is: the Overview Dashboard gets a dedicated, responsive "Active Blockers" card (resolvable inline), the Analytics page shows a real active-blocker stat card and a per-day series on the telemetry chart, and each active blocker is a line item in the Detected Risk Factors list.
+- Persisted per-user via `/api/blockers` (disk + optional Supabase), with `department`/`userName` attribution carried server-side for HR-side aggregation — never exposed on the employee-facing page itself.
+
+### 5.4 Mental & AI Coach
 - Daily mood check-in with an energy rating; log history viewable via a scroll wheel.
 - Scripted wellness chat coach ("AI Haven Wellness Coach") for guided prompts — not a live LLM integration.
 
-### 5.4 Physical Health
+### 5.5 Physical Health
 - Hydration tracker with a configurable reminder interval.
 - Guided micro-break timers: posture/shoulder stretch, 20-20-20 eye rest, short walk — each with its own interval and active/inactive toggle.
 
-### 5.5 Peer Appreciation
+### 5.6 Peer Appreciation
 - Private, 1:1 conversations only — no public company-wide feed. A sender selects a recipient from their available colleagues and sends a message, optionally tagged with a badge type and an optional coffee-voucher note.
 - Conversation view is a real filter over the shared badge data (sender/recipient match in either direction), not a separate per-pair data store — verified to correctly isolate each pair's messages from every other conversation.
 - Recipient stays selected after sending, so the view behaves like a persistent thread rather than a one-shot form.
 
-### 5.6 Adaptive Focus Mode & Accessibility
+### 5.7 Adaptive Focus Mode & Accessibility
 - Dyslexia-friendly font toggle, high-contrast mode, reduced-motion / clutter-reduction toggle.
 - Notification batching: non-urgent alerts queue into a digest instead of interrupting immediately; queue count is visible.
 - Pomodoro-style focus timer (25-minute focus / 5-minute break) with start/pause/reset and a mode switch.
 
-### 5.7 Boundary Guard
+### 5.8 Boundary Guard
 - Configurable quiet hours (start/end).
 - While active, non-urgent notifications are genuinely held (not just visually suppressed) and delivered as a digest when the window ends, or released manually.
 - Auto-reply message configurable for the quiet-hours window.
 
-### 5.8 HR Executive View (HR Manager, Admin)
-- Team burnout heatmap by department (risk score, status, headcount, overworking count).
-- Live team attendance board.
-- Confidential wellness flags raised by employees, surfaced as actionable outreach items.
-- PTO request approvals.
+### 5.9 HR Executive View (HR Manager, Admin)
+- Redesigned as a bento grid: a 3-card KPI row, a 2/3 + 1/3 split pairing the department heatmap with a Caring Alerts summary tile, and full-width bands for shift attendance and leave approvals.
+- **Department Risk Heatmap** — departments are derived from active accounts, not a fixed list, so a new department created in Account Management appears automatically. Each row's risk score is an explicit, documented weighted sum of that department's real signals this week (overtime hours, late clock-ins, active Workflow Blockers, pending caring alerts), capped at 100 — the formula is spelled out in a tooltip, not an opaque "AI" number.
+- **Mood Check-In Participation** — the real share of active employees who logged a check-in today, computed from org-wide mood data. Individual mood/note content is never shown to HR through this view; only participation counts, preserving what "anonymous to HR" means.
+- **Active Workflow Blockers** — real org-wide unresolved count, feeding directly into the department risk scores above.
+- **Caring Alerts** — confidential, anonymous wellness flags from employees. HR replies with a real free-text message to the flagged employee (not a canned button); the message is delivered to that employee's Notifications bell — instantly via a live Supabase Realtime subscription if they're online, or on their next load otherwise — and the resolved alert displays exactly what was sent, not just a "handled" badge.
+- **Live Shift Attendance & Time-In Board** — real-time company-wide clock-in/out telemetry with active/completed filters.
+- **PTO approvals** — same approve/reject flow as 5.12 below, from the HR side.
 
-### 5.9 Account Management (Admin only)
+### 5.10 Account Management (Admin only)
 - Create, disable, and restore user accounts.
 - Role assignment (employee / hr_manager / admin).
 - Soft-delete recovery vault — deleted accounts are recoverable, not immediately purged; a separate, explicit "permanently purge" action exists for final deletion.
 
-### 5.10 PTO & Rest Hub
-- Submit PTO requests against a category (e.g. vacation, sick).
+### 5.11 PTO & Rest Hub
+- Submit PTO requests against a category (e.g. vacation, sick); each category's explanation lives in a help-icon tooltip rather than truncated on-card text.
 - Category-based auto-approval rules where applicable.
 - Balance tracking (total allowance, used, pending, remaining).
 
-### 5.11 Overview Dashboard
-- Bento-grid layout: a tall "Workday Shift Gauge" tile (with the weekly on-time-rate/late-days strip), a wide "Burnout Risk" hero tile, and a wide "Daily Mood Check-In" tile, arranged responsively (single column on mobile, a 2-column tablet layout, and an L-shaped 3-column desktop mosaic).
+### 5.12 Overview Dashboard
+- Bento-grid layout: a tall "Workday Shift Gauge" tile (with the weekly on-time-rate/late-days strip), a wide "Burnout Risk" hero tile, a wide "Mood Check-In" tile, and a full-width "Active Blockers" band — arranged responsively (single column on mobile, a 2-column tablet layout, and an L-shaped 3-column desktop mosaic).
+- The tall Workday tile's gauge grows and centers to absorb whatever extra height the row-span gives it at desktop width, instead of leaving dead space between the clock-out button and the weekly stats footer.
 
 ## 6. Non-functional requirements
 
-- **Persistence:** per-user state (mood logs, shift timer, accessibility settings, boundary config, etc.) lives in `localStorage`, namespaced per account email. Shared state (accounts, PTO, badges, notifications, shifts) is served through Next.js API routes backed by flat JSON files under `.data/` (gitignored, created at runtime). No database is required to run the app.
-- **Optional cloud sync:** if Supabase environment variables are present, some writes additionally sync there; the app must continue to function fully with them absent.
+- **Persistence:** per-user state (mood logs, shift timer, accessibility settings, boundary config, etc.) lives in `localStorage`, namespaced per account email. Shared state (accounts, PTO, badges, notifications, shifts, blockers, HR outreach messages) is served through Next.js API routes backed by flat JSON files under `.data/` (gitignored, created at runtime). No database is required to run the app.
+- **Optional cloud sync:** if Supabase environment variables are present, writes dual-write there and one live Realtime channel (`wellness_sync_channel`) pushes changes — new appreciation badges, HR outreach messages, mood logs, shifts, PTO, notifications — to connected clients instantly; the app must continue to function fully with Supabase absent, falling back to the JSON disk store.
 - **Responsiveness:** all views must be usable at mobile, tablet, and desktop widths; verified live at each breakpoint, not just assumed from Tailwind classes.
 - **Theming:** full light/dark mode support across every view.
-- **Accuracy over decoration:** no UI element should imply functionality that doesn't exist behind it (this was the explicit reason the "Weekly Meetings" metric and the ambient-soundscape picker were removed — both had no real data or logic behind them).
+- **Accuracy over decoration:** no UI element should imply functionality that doesn't exist behind it (this was the explicit reason the "Weekly Meetings" metric, the ambient-soundscape picker, the fabricated HR department heatmap, and the canned "Trigger Team Focus Day" / caring-alert resolution buttons were removed or replaced — none had real data or logic behind them).
 - **Code quality gates before any commit:** `tsc --noEmit` clean, `next build` clean (all API routes present), and ESLint checked against the running baseline with zero new errors introduced.
 
 ## 7. Tech stack
 
-Next.js 16 (App Router, Turbopack) + React 19 + TypeScript, Tailwind CSS 4, Recharts for charts, optional Supabase client. See [README.md](HR-HAVEN/README.md) for setup instructions, environment variables, and the demo account table.
+Next.js 16 (App Router, Turbopack) + React 19 + TypeScript, Tailwind CSS 4, Recharts for charts, Supabase (Postgres + Realtime, optional). The full schema — 8 tables (profiles, mood logs, blockers, PTO requests, peer badges, HR notifications, HR outreach messages, work shifts), RLS, and Realtime publication — lives in [supabase_schema.sql](supabase_schema.sql), checked column-by-column against what the API routes actually read/write rather than authored independently of them. See [README.md](HR-HAVEN/README.md) for setup instructions, environment variables, and the demo account table.
 
 ## 8. Known limitations / explicitly out of scope
 
@@ -114,9 +125,12 @@ Next.js 16 (App Router, Turbopack) + React 19 + TypeScript, Tailwind CSS 4, Rech
 - No real meeting-platform integration exists; anything meeting-related was removed from the product (see the "Weekly Meetings" → "Late Attendance" replacement) rather than left as a fabricated metric.
 - Single-organization data model; no multi-tenant support.
 - No native mobile app.
+- Authentication is custom and stores `profiles.password` in plaintext — the app does not use Supabase Auth sessions, so there's no `auth.uid()` to scope Row Level Security to; access control lives entirely in the Next.js API routes. Fine for a demo/local app; would need a real auth overhaul before handling real employee data.
 
 ## 9. Open questions
 
 - Should the scripted AI Coach be upgraded to a real model-backed conversation, and if so, what's the data-privacy boundary for employee mood/wellness data sent to a third-party API?
 - Should PTO auto-approval rules be configurable per-department, or remain global?
 - Is a public/opt-in appreciation feed worth reintroducing as a separate, explicitly-optional view now that the default is private-only (per the 2026-08 decision to replace, not augment, the public feed)?
+- The department risk-score weighting (overtime/late-arrival/blocker/alert point values) was chosen to be transparent and defensible, not validated against real attrition or burnout outcomes — worth revisiting once there's real usage data to tune against.
+- Should the plaintext-password auth model be replaced with real Supabase Auth before this goes anywhere near production data?
