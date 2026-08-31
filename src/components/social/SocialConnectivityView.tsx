@@ -4,19 +4,17 @@ import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { PeerBadge } from '../../types/wellness';
 import {
-  Award,
   Coffee,
   Send,
   UserCheck,
-  ShieldAlert,
   Sparkles,
   ArrowRight,
-  ExternalLink,
-  Calendar,
-  Filter
+  ExternalLink
 } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { EmptyState } from '../common/EmptyState';
+
+const stripYou = (name: string) => name.replace(/\s*\(You\)/gi, '').trim();
 
 export const SocialConnectivityView: React.FC = () => {
   const {
@@ -39,21 +37,15 @@ export const SocialConnectivityView: React.FC = () => {
   const [teammateName, setTeammateName] = useState('');
   const [hrReason, setHrReason] = useState('');
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | PeerBadge['badgeType']>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month'>('all');
 
   const handleSendBadge = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipient.trim() || !message.trim()) return;
-    const cleanRecip = recipient.trim().toLowerCase();
-    const isAdminTarget = cleanRecip.includes('system administrator') || accounts.some(a => (a.name.toLowerCase() === cleanRecip || a.email.toLowerCase() === cleanRecip) && a.role === 'admin');
-    if (isAdminTarget) {
-      alert('System Administrator cannot be mentioned for appreciation badges. Please select an HR Manager or Teammate.');
-      return;
-    }
-    sendPeerBadge(recipient.trim(), badgeType, message.trim(), sendCoffee);
-    setRecipient('');
+    if (!recipient || !message.trim()) return;
+    // The recipient dropdown only lists eligible colleagues (admin already
+    // excluded), so there's no freeform name to validate here anymore.
+    sendPeerBadge(recipient, badgeType, message.trim(), sendCoffee);
     setMessage('');
+    // Keep the recipient selected — this is a conversation, not a one-off form.
   };
 
   const handleHrSuggest = (e: React.FormEvent) => {
@@ -75,12 +67,15 @@ export const SocialConnectivityView: React.FC = () => {
     }, 2500);
   };
 
-  const badgeOptions: { type: PeerBadge['badgeType']; label: string; icon: string; desc: string }[] = [
-    { type: 'lifesaver', label: 'Lifesaver', icon: '🆘', desc: 'Stepped in when work got heavy' },
-    { type: 'focus_champion', label: 'Focus Champion', icon: '🎯', desc: 'Respected deep focus hours' },
-    { type: 'team_anchor', label: 'Team Anchor', icon: '⚓', desc: 'Kept everyone grounded & supported' },
-    { type: 'positive_energy', label: 'Positive Energy', icon: '🌟', desc: 'Brought optimism & kindness' }
+  const badgeOptions: { type: PeerBadge['badgeType']; label: string; icon: string }[] = [
+    { type: 'lifesaver', label: 'Lifesaver', icon: '🆘' },
+    { type: 'focus_champion', label: 'Focus Champion', icon: '🎯' },
+    { type: 'team_anchor', label: 'Team Anchor', icon: '⚓' },
+    { type: 'positive_energy', label: 'Positive Energy', icon: '🌟' }
   ];
+
+  const badgeLabel = (type: PeerBadge['badgeType']) =>
+    badgeOptions.find(b => b.type === type)?.label ?? type;
 
   // Eligible colleagues for recipient mentions (Only HR Managers and Employees; System Administrator excluded)
   const availableColleagues = accounts.filter(
@@ -100,63 +95,30 @@ export const SocialConnectivityView: React.FC = () => {
     ) {
       return userProfile.avatarUrl || fallbackAvatar;
     }
-    const cleanName = name.replace(/\s*\(You\)/i, '').trim().toLowerCase();
+    const cleanName = stripYou(name).toLowerCase();
     const matched = accounts.find(
       a => a.name.toLowerCase() === cleanName || a.email.toLowerCase() === cleanName
     );
     return matched?.avatarUrl || fallbackAvatar;
   };
 
-  const matchesDateFilter = (badge: PeerBadge, filter: 'all' | 'today' | 'yesterday' | 'week' | 'month'): boolean => {
-    if (filter === 'all') return true;
-
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
-    const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-    let badgeTime = 0;
-    if (badge.createdAt) {
-      const parsed = new Date(badge.createdAt).getTime();
-      if (!isNaN(parsed)) badgeTime = parsed;
-    }
-
-    if (!badgeTime && badge.timestamp) {
-      const tsLower = badge.timestamp.toLowerCase();
-      if (tsLower.includes('just now') || tsLower.includes('today') || tsLower.includes('min') || tsLower.includes('hour') || tsLower.includes('sec')) {
-        badgeTime = now.getTime();
-      } else if (tsLower.includes('yesterday')) {
-        badgeTime = todayStart - 1000;
-      } else {
-        const parsed = Date.parse(badge.timestamp);
-        if (!isNaN(parsed)) badgeTime = parsed;
-      }
-    }
-
-    if (!badgeTime) return true;
-
-    if (filter === 'today') {
-      return badgeTime >= todayStart;
-    }
-    if (filter === 'yesterday') {
-      return badgeTime >= yesterdayStart && badgeTime < todayStart;
-    }
-    if (filter === 'week') {
-      return badgeTime >= sevenDaysAgo;
-    }
-    if (filter === 'month') {
-      return badgeTime >= monthStart;
-    }
-
-    return true;
-  };
-
-  const filteredBadges = badges.filter(badge => {
-    const matchesCategory = activeFilter === 'all' || badge.badgeType === activeFilter;
-    if (!matchesCategory) return false;
-    return matchesDateFilter(badge, dateFilter);
-  });
+  // Private conversation: only badges exchanged between the current user and the
+  // selected recipient, in either direction — not the company-wide feed. Reuses
+  // the same badges array/API as before; this is a view-level filter, the same
+  // privacy pattern the rest of the app already uses (e.g. anonymous mood logs)
+  // rather than a new backend concept.
+  const myName = stripYou(userProfile.name || '').toLowerCase();
+  const conversation = recipient
+    ? badges
+        .filter(b => {
+          const sender = stripYou(b.senderName).toLowerCase();
+          const recip = stripYou(b.recipientName).toLowerCase();
+          const other = recipient.toLowerCase();
+          return (sender === myName && recip === other) || (sender === other && recip === myName);
+        })
+        .slice()
+        .reverse() // badges are newest-first; a conversation reads oldest-first
+    : [];
 
   return (
     <div className="space-y-6">
@@ -169,7 +131,7 @@ export const SocialConnectivityView: React.FC = () => {
           <Tooltip accent="amber"
             icon="help"
             align="left"
-            content="Celebrate peer contributions in real-time, send gratitude badges, and confidentially alert HR."
+            content="Send a private appreciation note to a teammate, or confidentially alert HR."
           />
         </div>
 
@@ -214,9 +176,6 @@ export const SocialConnectivityView: React.FC = () => {
             : 'bg-gradient-to-br from-rose-50/90 via-white to-rose-50/60 border-rose-300/80 text-slate-900 shadow-rose-500/10'
           }`}>
           <div className="flex flex-wrap items-center gap-2.5 mb-4">
-            <div className={`p-1.5 rounded-lg ${isDarkMode ? 'bg-rose-950 text-rose-400 border border-rose-800' : 'bg-rose-100 text-rose-600 border border-rose-200'}`}>
-              <ShieldAlert className="w-5 h-5 shrink-0" />
-            </div>
             <h3 className={`text-base font-extrabold tracking-tight ${isDarkMode ? 'text-rose-100' : 'text-rose-950'}`}>
               Confidential Teammate Wellness Flag
             </h3>
@@ -265,6 +224,13 @@ export const SocialConnectivityView: React.FC = () => {
                     }`}
                   required
                 />
+                <datalist id="colleagues-list">
+                  {availableColleagues.map(a => (
+                    <option key={a.id} value={a.name}>
+                      {a.name} ({a.department})
+                    </option>
+                  ))}
+                </datalist>
               </div>
 
               <div>
@@ -283,9 +249,8 @@ export const SocialConnectivityView: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                <div className={`text-[11px] font-medium flex items-center gap-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  <span>🛡️</span>
-                  <span>Your identity and email will never be revealed to anyone.</span>
+                <div className={`text-[11px] font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Your identity and email will never be revealed to anyone.
                 </div>
                 <div className="flex items-center gap-3 self-end sm:self-auto">
                   <button
@@ -311,292 +276,151 @@ export const SocialConnectivityView: React.FC = () => {
         </div>
       )}
 
-      {/* Main Grid: Send Badge + Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Send Recognition Badge Form */}
-        <div className={`enterprise-card p-6 border flex flex-col justify-between ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-950/60 text-amber-400 border-amber-800' : 'bg-amber-50 text-amber-600 border-amber-100'
-                }`}>
-                <Award className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Send Appreciation Badge
-                </h3>
-                <Tooltip accent="amber"
-                  icon="help"
-                  align="left"
-                  content="Recognize teammates and sync peer appreciation live to the company database and feed."
-                />
-              </div>
-            </div>
+      {/* Peer Appreciation — a single bordered card: pick a teammate, see your
+          private conversation with just them, and send a new note. Replaces the
+          old two-panel form + company-wide feed layout. */}
+      <div className={`enterprise-card border flex flex-col ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+        {/* Recipient selector */}
+        <div className={`p-4 sm:p-5 border-b flex flex-col sm:flex-row sm:items-center gap-3 ${isDarkMode ? 'border-[#2e323e]' : 'border-slate-100'}`}>
+          <label htmlFor="recipient-select" className={`text-xs font-bold shrink-0 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+            Conversation with
+          </label>
+          <select
+            id="recipient-select"
+            value={recipient}
+            onChange={e => setRecipient(e.target.value)}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all border cursor-pointer focus:outline-none ${isDarkMode
+                ? 'bg-[#181a22] border-[#2e323e] text-white focus:border-amber-500'
+                : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-amber-500 focus:bg-white'
+              }`}
+          >
+            <option value="">Select a teammate…</option>
+            {availableColleagues.map(a => (
+              <option key={a.id} value={a.name}>{a.name} · {a.department}</option>
+            ))}
+          </select>
+          {recipient && (
+            <span className={`text-[11px] font-semibold shrink-0 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              {conversation.length} message{conversation.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
 
-            <form onSubmit={handleSendBadge} className="space-y-4">
-              <div>
-                <label className={`text-xs font-bold block mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Recipient Teammate
-                </label>
-                <input
-                  type="text"
-                  list="colleagues-list"
-                  value={recipient}
-                  onChange={e => setRecipient(e.target.value)}
-                  placeholder="e.g. Nicole Arciaga or type a name..."
-                  className={`w-full rounded-xl px-4 py-2.5 text-xs transition-all border ${isDarkMode
-                      ? 'bg-[#181a22] border-[#2e323e] text-white placeholder-slate-500 focus:border-amber-500'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-amber-500 focus:bg-white'
-                    }`}
-                  required
-                />
-                <datalist id="colleagues-list">
-                  {availableColleagues.map(a => (
-                    <option key={a.id} value={a.name}>
-                      {a.name} ({a.department})
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-
-              <div>
-                <label className={`text-xs font-bold block mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Select Badge Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {badgeOptions.map(b => (
-                    <button
-                      key={b.type}
-                      type="button"
-                      onClick={() => setBadgeType(b.type)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${badgeType === b.type
-                          ? isDarkMode
-                            ? 'bg-amber-950/60 border-amber-500 text-amber-300 font-bold shadow-xs'
-                            : 'bg-amber-50 border-amber-400 text-amber-900 font-bold shadow-xs'
-                          : isDarkMode
-                            ? 'bg-[#181a22] border-[#2e323e] text-slate-300 hover:bg-[#20232e]'
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                    >
-                      <span className="text-xl">{b.icon}</span>
-                      <div className="overflow-hidden">
-                        <p className="text-xs font-bold truncate">{b.label}</p>
-                      </div>
-                    </button>
-                  ))}
+        {/* Thread */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 min-h-[280px] max-h-[440px]">
+          {!recipient ? (
+            <EmptyState
+              icon={UserCheck}
+              iconAccent="amber"
+              title="Select a teammate"
+              description="Choose someone from the list above to see your private appreciation conversation with them."
+            />
+          ) : conversation.length === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              iconAccent="amber"
+              size="sm"
+              title={`No messages with ${recipient} yet`}
+              description="Send the first appreciation note below to start the conversation."
+            />
+          ) : (
+            conversation.map(badge => {
+              const isMine = stripYou(badge.senderName).toLowerCase() === myName;
+              return (
+                <div key={badge.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  {!isMine && (
+                    <img
+                      src={resolveAvatar(badge.senderName, badge.senderAvatar)}
+                      alt={badge.senderName}
+                      className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5"
+                    />
+                  )}
+                  <div
+                    className={`max-w-[85%] sm:max-w-[65%] rounded-2xl p-3.5 border space-y-1.5 ${isMine
+                        ? isDarkMode ? 'bg-amber-950/40 border-amber-800/60' : 'bg-amber-50 border-amber-200'
+                        : isDarkMode ? 'bg-[#181a22] border-[#2e323e]' : 'bg-slate-50 border-slate-200'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-[#12141a] text-amber-300' : 'bg-white text-amber-800'}`}>
+                        {badgeLabel(badge.badgeType)}
+                      </span>
+                      <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {badge.timestamp}
+                      </span>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {badge.message}
+                    </p>
+                    {badge.virtualCoffeeSent && (
+                      <p className="text-[10px] font-bold text-amber-500">☕ Coffee voucher included</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              );
+            })
+          )}
+        </div>
 
-              <div>
-                <label className={`text-xs font-bold block mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Appreciation Message
-                </label>
-                <textarea
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder="Write a warm note of thanks..."
-                  className={`w-full rounded-xl px-4 py-2.5 text-xs transition-all border resize-none h-24 ${isDarkMode
-                      ? 'bg-[#181a22] border-[#2e323e] text-white placeholder-slate-500 focus:border-amber-500'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-amber-500 focus:bg-white'
-                    }`}
-                  required
-                />
-              </div>
-
-              {/* Include Virtual Coffee Toggle */}
-              <div
-                onClick={() => setSendCoffee(!sendCoffee)}
-                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${isDarkMode
-                    ? 'bg-[#181a22] border-[#2e323e] hover:border-amber-500/50'
-                    : 'bg-slate-50 border-slate-200 hover:border-amber-300'
+        {/* Compose */}
+        <form
+          onSubmit={handleSendBadge}
+          className={`p-4 sm:p-5 border-t space-y-3 ${isDarkMode ? 'border-[#2e323e]' : 'border-slate-100'} ${!recipient ? 'opacity-50 pointer-events-none' : ''}`}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {badgeOptions.map(b => (
+              <button
+                key={b.type}
+                type="button"
+                onClick={() => setBadgeType(b.type)}
+                className={`px-2.5 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${badgeType === b.type
+                    ? isDarkMode
+                      ? 'bg-amber-950/60 border-amber-500 text-amber-300'
+                      : 'bg-amber-50 border-amber-400 text-amber-900'
+                    : isDarkMode
+                      ? 'bg-[#181a22] border-[#2e323e] text-slate-300 hover:bg-[#20232e]'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
               >
-                <div className="flex items-center gap-2">
-                  <Coffee className="w-4 h-4 text-amber-500" />
-                  <span className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                    Include Virtual Coffee Voucher ☕
-                  </span>
-                </div>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center ${sendCoffee ? 'bg-amber-500 border-amber-500' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
-                  }`}>
-                  {sendCoffee && <span className="text-[10px] text-white font-bold">✓</span>}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-extrabold text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer"
-              >
-                <Send className="w-4 h-4 fill-white" />
-                <span>Send Appreciation Badge</span>
+                <span>{b.icon}</span>
+                <span className="truncate">{b.label}</span>
               </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Appreciation Wall Feed */}
-        <div className={`enterprise-card p-6 border lg:col-span-2 flex flex-col h-[600px] ${isDarkMode ? 'bg-[#202229] border-[#2e323d] text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-          {/* Feed Title & Badges Filter Header */}
-          <div className={`flex flex-col gap-3 pb-3 mb-3 border-b shrink-0 ${isDarkMode ? 'border-[#2e323e]' : 'border-slate-100'
-            }`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Company Gratitude & Recognition Feed
-                </h3>
-                <Tooltip accent="amber"
-                  icon="help"
-                  align="left"
-                  content="Real-time timeline of company-wide peer badges, recognition messages, and coffee vouchers."
-                />
-              </div>
-
-              {/* Badge Category Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {(['all', 'lifesaver', 'focus_champion', 'team_anchor', 'positive_energy'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setActiveFilter(f)}
-                    className={`text-[11px] px-2.5 py-1 rounded-full font-bold transition-all shrink-0 cursor-pointer ${activeFilter === f
-                        ? 'bg-amber-500 text-white shadow-xs'
-                        : isDarkMode
-                          ? 'bg-[#181a22] text-slate-400 hover:text-white border border-[#2e323e]'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                  >
-                    {f === 'all' ? `All (${badges.length})` : f === 'lifesaver' ? '🆘 Lifesaver' : f === 'focus_champion' ? '🎯 Focus' : f === 'team_anchor' ? '⚓ Anchor' : '🌟 Energy'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Time / Date Filter Bar (Today, Yesterday, This Week, This Month, All Time) */}
-            <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t ${isDarkMode ? 'border-[#2a2e3b]' : 'border-slate-100'
-              }`}>
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                <div className={`flex items-center gap-1 text-[11px] font-bold mr-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Timeframe:</span>
-                </div>
-                {[
-                  { key: 'all', label: 'All Time' },
-                  { key: 'today', label: '📅 Today' },
-                  { key: 'yesterday', label: '⏪ Yesterday' },
-                  { key: 'week', label: '🗓️ This Week' },
-                  { key: 'month', label: '📆 This Month' }
-                ].map(t => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setDateFilter(t.key as any)}
-                    className={`text-[11px] px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${dateFilter === t.key
-                        ? isDarkMode
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-xs'
-                          : 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs'
-                        : isDarkMode
-                          ? 'bg-[#181a22] text-slate-400 hover:text-white border border-[#2e323e]'
-                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
-                      }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className={`text-[11px] font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Showing <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{filteredBadges.length}</strong> of {badges.length}
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3.5 pr-1.5">
-            {badges.length === 0 ? (
-              <EmptyState
-                icon={Sparkles}
-                iconAccent="amber"
-                title="No Peer Appreciations Yet"
-                description="Be the first to recognize a colleague! Use the form on the left to send an appreciation badge."
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder={recipient ? `Write a warm note to ${recipient}...` : 'Select a teammate first...'}
+            disabled={!recipient}
+            className={`w-full rounded-xl px-4 py-2.5 text-xs transition-all border resize-none h-20 focus:outline-none ${isDarkMode
+                ? 'bg-[#181a22] border-[#2e323e] text-white placeholder-slate-500 focus:border-amber-500'
+                : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-amber-500 focus:bg-white'
+              }`}
+          />
+
+          <div className="flex items-center justify-between gap-3">
+            <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <input
+                type="checkbox"
+                checked={sendCoffee}
+                onChange={e => setSendCoffee(e.target.checked)}
+                className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
               />
-            ) : filteredBadges.length === 0 ? (
-              <EmptyState
-                icon={Award}
-                iconAccent="amber"
-                size="sm"
-                title="No recognitions found for this timeframe"
-                description={
-                  <>
-                    Try switching to{' '}
-                    <button
-                      onClick={() => { setDateFilter('all'); setActiveFilter('all'); }}
-                      className="text-amber-500 underline font-bold cursor-pointer"
-                    >
-                      All Time
-                    </button>{' '}
-                    or send a new badge!
-                  </>
-                }
-              />
-            ) : (
-              filteredBadges.map(badge => (
-                <div
-                  key={badge.id}
-                  className={`p-4 rounded-xl border space-y-3 transition-all ${isDarkMode
-                      ? 'bg-[#181a22] border-[#2e323e] hover:border-amber-500/50'
-                      : 'bg-slate-50 border-slate-200 hover:border-amber-300'
-                    }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={resolveAvatar(badge.senderName, badge.senderAvatar)}
-                        alt={badge.senderName}
-                        className="w-9 h-9 rounded-full border-2 border-blue-500 object-cover shrink-0 shadow-xs"
-                      />
-                      <div>
-                        <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {badge.senderName}{' '}
-                          <span className={`font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            recognized
-                          </span>{' '}
-                          <span className="text-amber-500 font-extrabold">{badge.recipientName}</span>
-                        </p>
-                        <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                          {badge.timestamp}
-                        </span>
-                      </div>
-                    </div>
+              <Coffee className="w-4 h-4 text-amber-500" />
+              <span>Include coffee voucher</span>
+            </label>
 
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 shrink-0 ${isDarkMode
-                        ? 'bg-amber-950/60 text-amber-300 border-amber-800'
-                        : 'bg-amber-50 text-amber-900 border-amber-200'
-                      }`}>
-                      {badge.badgeType === 'lifesaver' ? '🆘 Lifesaver' :
-                        badge.badgeType === 'focus_champion' ? '🎯 Focus Champion' :
-                          badge.badgeType === 'team_anchor' ? '⚓ Team Anchor' : '🌟 Positive Energy'}
-                    </span>
-                  </div>
-
-                  <p className={`text-xs leading-relaxed p-3 rounded-lg border ${isDarkMode
-                      ? 'bg-[#12141a] text-slate-200 border-[#262b3a]'
-                      : 'bg-white text-slate-700 border-slate-200'
-                    }`}>
-                    "{badge.message}"
-                  </p>
-
-                  {badge.virtualCoffeeSent && (
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-amber-500">
-                      <Coffee className="w-4 h-4 text-amber-500" />
-                      <span>Virtual Coffee Voucher Included ☕</span>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+            <button
+              type="submit"
+              disabled={!recipient || !message.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-extrabold text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <Send className="w-3.5 h-3.5 fill-white" />
+              <span>Send</span>
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
