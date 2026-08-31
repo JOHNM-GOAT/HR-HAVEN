@@ -2,11 +2,9 @@
 
 import React, { useEffect } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { AccessibilitySettings } from '../../types/wellness';
 import {
   Zap,
   Sliders,
-  Volume2,
   Play,
   Pause,
   RotateCcw
@@ -22,7 +20,6 @@ export const CognitiveInclusivityView: React.FC = () => {
     toggleHighContrast,
     toggleBatchNotifications,
     toggleClutterReduction,
-    setAmbientSound,
     setToastNotification,
     pomodoro,
     togglePomodoro,
@@ -31,14 +28,6 @@ export const CognitiveInclusivityView: React.FC = () => {
     batchedNotifications,
     isDarkMode
   } = useWellness();
-
-  const soundOptions: { id: AccessibilitySettings['ambientSound']; label: string; icon: string }[] = [
-    { id: 'none', label: 'Mute', icon: '🔇' },
-    { id: 'rain', label: 'Gentle Rain', icon: '🌧️' },
-    { id: 'lofi', label: 'Deep Focus Lo-Fi', icon: '🎧' },
-    { id: 'waves', label: 'Ocean Waves', icon: '🌊' },
-    { id: 'forest', label: 'Forest Birds', icon: '🌲' }
-  ];
 
   return (
     <div className="space-y-6">
@@ -50,7 +39,7 @@ export const CognitiveInclusivityView: React.FC = () => {
         <Tooltip
           icon="help"
           align="left"
-          content="Customize your sensory environment with dyslexia-friendly typography, high-contrast themes, notification batching digests, soothing ambient soundscapes, and integrated Pomodoro deep work cycles."
+          content="Customize your sensory environment with dyslexia-friendly typography, high-contrast themes, notification batching digests, and integrated Pomodoro deep work cycles."
         />
       </div>
 
@@ -201,30 +190,6 @@ export const CognitiveInclusivityView: React.FC = () => {
               <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Removes non-essential animations and suppresses visual noise for calm focus.
               </p>
-            </div>
-          </div>
-
-          {/* Ambient Soundscapes Selector */}
-          <div className="pt-4 border-t border-slate-100">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-blue-600" />
-              Soothing Ambient Soundscapes
-            </h4>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {soundOptions.map(sound => (
-                <button
-                  key={sound.id}
-                  onClick={() => setAmbientSound(sound.id)}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${accessibility.ambientSound === sound.id
-                    ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-xs'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                >
-                  <span className="text-2xl">{sound.icon}</span>
-                  <span className="text-xs">{sound.label}</span>
-                </button>
-              ))}
             </div>
           </div>
         </div>

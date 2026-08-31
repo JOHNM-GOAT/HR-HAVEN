@@ -218,7 +218,6 @@ export interface AccessibilitySettings {
   highContrast: boolean;
   reducedMotion: boolean;
   batchNotifications: boolean;
-  ambientSound: 'none' | 'rain' | 'lofi' | 'waves' | 'forest';
 }
 
 export interface BoundaryGuardConfig {

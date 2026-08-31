@@ -86,8 +86,7 @@ export const initialAccessibilitySettings: AccessibilitySettings = {
   dyslexiaFont: false,
   highContrast: false,
   reducedMotion: false,
-  batchNotifications: true,
-  ambientSound: 'none'
+  batchNotifications: true
 };
 
 export const teamBurnoutOverview = [

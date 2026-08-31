@@ -134,8 +134,7 @@ interface WellnessContextType {
   toggleHighContrast: () => void;
   toggleBatchNotifications: () => void;
   toggleClutterReduction: () => void;
-  setAmbientSound: (sound: AccessibilitySettings['ambientSound']) => void;
-  
+
   isSidebarOpen: boolean;
   toggleSidebar: (open?: boolean) => void;
   
@@ -1557,13 +1556,6 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const setAmbientSound = (sound: AccessibilitySettings['ambientSound']) => {
-    setAccessibility(prev => ({ ...prev, ambientSound: sound }));
-    if (sound !== 'none') {
-      setToastNotification(`Playing ambient soundscape: ${sound.toUpperCase()}`);
-    }
-  };
-
   const createAccount = (accountData: Omit<UserAccount, 'id' | 'createdAt' | 'lastActive'>) => {
     const today = new Date().toISOString().split('T')[0];
     const newAccount: UserAccount = {
@@ -2677,7 +2669,6 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toggleHighContrast,
         toggleBatchNotifications,
         toggleClutterReduction,
-        setAmbientSound,
         isSidebarOpen,
         toggleSidebar,
         toastNotification,
