@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { MoodType, getBurnoutRiskConfig, getLateMinutes, formatLateDuration } from '../../types/wellness';
+import { MoodType, getBurnoutRiskConfig, getLateMinutes, formatLateDuration, getWeeklyAttendanceSummary } from '../../types/wellness';
 import { PolarBearEmoji } from '../common/PolarBearEmoji';
 import { Tooltip } from '../common/Tooltip';
 import { NotificationsBell } from './NotificationsBell';
@@ -39,6 +39,7 @@ export const OverviewDashboard: React.FC = () => {
     workShift,
     toggleClockInOut,
     resetWorkShift,
+    teamShifts,
     isDarkMode
   } = useWellness();
 
@@ -90,6 +91,8 @@ export const OverviewDashboard: React.FC = () => {
   // must not take the whole dashboard down — fall back to the neutral style.
   const trendConfig = TREND_STYLES[burnoutMetrics.trend] ?? TREND_STYLES.stable;
   const riskFactors = burnoutMetrics.riskFactors ?? [];
+
+  const weeklyAttendance = getWeeklyAttendanceSummary(teamShifts, workShift, userProfile.id, userProfile.name);
 
   const moodOptions: { type: MoodType; emoji: string; label: string; color: string }[] = [
     { type: 'thriving', emoji: '🤩', label: 'Thriving', color: 'hover:border-emerald-500 hover:bg-emerald-50 text-slate-800' },
@@ -169,8 +172,10 @@ export const OverviewDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Burnout Gauge + Workday Shift Gauge (Clock In/Out) + Mood Check-In */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Bento mosaic: Workday is a tall left tile spanning both rows; Burnout and
+          Mood stack as wide tiles on the right. Below md it's a single simple
+          stack in reading order (Workday, Burnout, Mood) — no bento shaping. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {/* Card 1: Workday Shift Gauge (Clock-In / Clock-Out) - Matching Gauge Design */}
         {(() => {
           const standardShiftSeconds = 8 * 3600; // 8 hours target
@@ -210,7 +215,7 @@ export const OverviewDashboard: React.FC = () => {
             : 'high_ot';
 
           return (
-            <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+            <div className={`enterprise-card p-4 sm:p-6 border lg:row-span-2 ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -377,58 +382,81 @@ export const OverviewDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* This Week — same getLateMinutes/9AM-standard definition as the Late
+                  badge above and the Analytics page's Late Attendance card. Real
+                  attendance data, not a placeholder for the tall bento cell. */}
+              <div className={`mt-4 pt-4 border-t grid grid-cols-2 gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                <div className={`rounded-xl border p-3 ${isDarkMode ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-emerald-50/70 border-emerald-200'}`}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">On-Time Rate</p>
+                  <p className={`text-xl font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{weeklyAttendance.onTimeRate}%</p>
+                  <p className="text-[10px] font-semibold text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">This week</p>
+                </div>
+                <div className={`rounded-xl border p-3 ${weeklyAttendance.lateDays > 0
+                  ? isDarkMode ? 'bg-rose-950/20 border-rose-800/40' : 'bg-rose-50/70 border-rose-200'
+                  : isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <p className={`text-[10px] font-bold uppercase tracking-wider ${weeklyAttendance.lateDays > 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-500 dark:text-slate-400'}`}>Late Days</p>
+                  <p className={`text-xl font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{weeklyAttendance.lateDays}</p>
+                  <p className={`text-[10px] font-semibold mt-0.5 ${weeklyAttendance.lateDays > 0 ? 'text-rose-700/80 dark:text-rose-400/80' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {weeklyAttendance.lateDays > 0 ? `${formatLateDuration(weeklyAttendance.lateMinutesTotal)} total` : 'None yet'}
+                  </p>
+                </div>
+              </div>
             </div>
           );
         })()}
 
-        {/* Card 2: Burnout Risk Ring Gauge */}
-        <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
-                  Burnout Risk Gauge
-                </h3>
-                <Tooltip
-                  icon="info"
-                  align="left"
-                  content={
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
-                        <p className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                          <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                          Burnout Risk Breakdown
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 text-[10px] font-bold">
-                        <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
-                          0–25: Low
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
-                          26–50: Normal
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
-                          51–75: Moderate
-                        </div>
-                        <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40">
-                          76–100: High Risk
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight pt-0.5">
-                        Scores update automatically based on work hours, breaks, and mood logs.
+        {/* Card 2: Burnout Risk — the bento hero, wide on desktop. Gauge and
+            trend/factors sit side by side at lg instead of stacked narrow,
+            so the extra width is used rather than left empty. */}
+        <div className={`enterprise-card p-4 sm:p-6 border lg:col-span-2 ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'}`}>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h3 className={`text-[13px] sm:text-sm font-bold uppercase tracking-wide sm:tracking-wider flex items-center gap-2 min-w-0 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
+                Burnout Risk Gauge
+              </h3>
+              <Tooltip
+                icon="info"
+                align="left"
+                content={
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                      <p className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                        Burnout Risk Breakdown
                       </p>
                     </div>
-                  }
-                />
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                Live Telemetry
-              </span>
+                    <div className="grid grid-cols-2 gap-1 text-[10px] font-bold">
+                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+                        0–25: Low
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40">
+                        26–50: Normal
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+                        51–75: Moderate
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40">
+                        76–100: High Risk
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight pt-0.5">
+                      Scores update automatically based on work hours, breaks, and mood logs.
+                    </p>
+                  </div>
+                }
+              />
             </div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+              Live Telemetry
+            </span>
+          </div>
 
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 mt-2">
             {/* Circular Gauge Visual */}
-            <div className="flex flex-col items-center my-4">
+            <div className="flex justify-center lg:shrink-0">
               <div className="relative w-40 h-40 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <path
@@ -460,7 +488,7 @@ export const OverviewDashboard: React.FC = () => {
             </div>
 
             {/* Trend + Risk Factors (live-computed, same source as AI Burnout Predictor page) */}
-            <div className="space-y-2">
+            <div className={`flex-1 w-full min-w-0 space-y-2 lg:pl-8 lg:border-l ${isDarkMode ? 'lg:border-slate-800' : 'lg:border-slate-100'}`}>
               <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border ${trendConfig.classes}`}>
                 <trendConfig.icon className="w-3.5 h-3.5" />
                 <span className="text-xs font-bold">{trendConfig.label}</span>
@@ -491,8 +519,9 @@ export const OverviewDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: Daily Mood Check-In Widget (Re-adjusted to 1-Column Fit) */}
-        <div className={`enterprise-card p-4 sm:p-6 border ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+        {/* Card 3: Daily Mood Check-In — wide bottom-right tile, matching the
+            Burnout tile's width above it so the right column reads as one shape. */}
+        <div className={`enterprise-card p-4 sm:p-6 border md:col-span-2 ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
           <div>
             {/* Header */}
             <div className="flex items-center justify-between gap-2 mb-2">

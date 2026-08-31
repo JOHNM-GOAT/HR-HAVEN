@@ -100,6 +100,61 @@ export const formatLateDuration = (totalMinutes: number): string => {
   return `0h ${m}m`;
 };
 
+export interface WeeklyAttendanceSummary {
+  attendedDays: number;
+  lateDays: number;
+  lateMinutesTotal: number;
+  onTimeRate: number; // 0-100, 100 when nothing has been attended yet
+}
+
+/**
+ * Aggregates this Mon-Sun week's punctuality from the same clock-in data and
+ * 9:00 AM threshold used everywhere else (getLateMinutes, the attendance
+ * calendar, the dashboard's live Late badge) so every surface agrees on what
+ * "late" means instead of each computing its own definition.
+ */
+export const getWeeklyAttendanceSummary = (
+  teamShifts: WorkShiftRecord[],
+  workShift: WorkShiftState,
+  userId: string,
+  userName: string,
+  now: Date = new Date()
+): WeeklyAttendanceSummary => {
+  const currentDayOfWeek = (now.getDay() + 6) % 7; // Monday = 0
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - currentDayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+
+  let attendedDays = 0;
+  let lateDays = 0;
+  let lateMinutesTotal = 0;
+
+  for (let index = 0; index < 7; index++) {
+    const dayDate = new Date(monday);
+    dayDate.setDate(monday.getDate() + index);
+    const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+    const isToday = index === currentDayOfWeek;
+
+    const matchedShift = teamShifts.find(s => (s.userId === userId || s.userName === userName) && s.date === dateStr);
+    let clockInForDay = matchedShift ? matchedShift.clockInTime : null;
+    const hasShift = !!matchedShift || (isToday && (workShift.isClockedIn || workShift.totalWorkedSeconds > 0));
+    if (isToday && (workShift.isClockedIn || workShift.totalWorkedSeconds > 0)) {
+      clockInForDay = workShift.clockInTime || clockInForDay;
+    }
+    if (!hasShift) continue;
+
+    attendedDays += 1;
+    const lateMinutes = getLateMinutes(clockInForDay);
+    if (lateMinutes > 0) {
+      lateDays += 1;
+      lateMinutesTotal += lateMinutes;
+    }
+  }
+
+  const onTimeRate = attendedDays > 0 ? Math.round(((attendedDays - lateDays) / attendedDays) * 100) : 100;
+  return { attendedDays, lateDays, lateMinutesTotal, onTimeRate };
+};
+
 export interface BurnoutMetrics {
   overallScore: number; // 0-100
   riskLevel: BurnoutRiskLevel;

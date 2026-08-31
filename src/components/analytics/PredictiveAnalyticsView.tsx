@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { getBurnoutRiskConfig } from '../../types/wellness';
+import { getBurnoutRiskConfig, getLateMinutes, formatLateDuration } from '../../types/wellness';
 import {
   Activity,
   Clock,
@@ -44,25 +44,37 @@ export const PredictiveAnalyticsView: React.FC = () => {
     );
 
     let otSecs = matchedShift ? matchedShift.overtimeSeconds : 0;
+    // Prefer today's live clock-in time over the (possibly stale) teamShifts copy —
+    // matches the convention already used by the attendance calendar.
+    let clockInForDay = matchedShift ? matchedShift.clockInTime : null;
+    const hasShift = !!matchedShift || (isToday && (workShift.isClockedIn || workShift.totalWorkedSeconds > 0));
     if (isToday && (workShift.isClockedIn || workShift.totalWorkedSeconds > 0)) {
       otSecs = Math.max(otSecs, workShift.overtimeSeconds);
+      clockInForDay = workShift.clockInTime || clockInForDay;
     }
 
     return {
       day: dayName,
       date: dateStr,
-      meetingHours: burnoutMetrics.meetingHoursWeekly > 0 && index < 5 ? parseFloat((burnoutMetrics.meetingHoursWeekly / 5).toFixed(1)) : 0,
-      overtimeHours: parseFloat((otSecs / 3600).toFixed(1))
+      overtimeHours: parseFloat((otSecs / 3600).toFixed(1)),
+      lateMinutes: getLateMinutes(clockInForDay),
+      hasShift
     };
   });
 
   const totalWeeklyOvertimeHours = weeklyChartData.reduce((acc, d) => acc + d.overtimeHours, 0);
-  const meetingHours = burnoutMetrics.meetingHoursWeekly || 0;
-  const meetingBenchmark = burnoutMetrics.meetingHoursBenchmark || 15;
-  const meetingProgress = Math.min(100, Math.round((meetingHours / meetingBenchmark) * 100));
-
   const overtimeBenchmark = 5; // 5h weekly threshold
   const overtimeProgress = Math.min(100, Math.round((totalWeeklyOvertimeHours / overtimeBenchmark) * 100));
+
+  // Late Attendance: real per-day clock-in data against the same 9:00 AM standard
+  // start used by the dashboard's Late badge and the attendance calendar — one
+  // definition of "late" everywhere, just aggregated to a week here.
+  const attendedDaysThisWeek = weeklyChartData.filter(d => d.hasShift).length;
+  const lateDaysThisWeek = weeklyChartData.filter(d => d.lateMinutes > 0).length;
+  const lateMinutesThisWeek = weeklyChartData.reduce((acc, d) => acc + d.lateMinutes, 0);
+  const weeklyOnTimeRate = attendedDaysThisWeek > 0
+    ? Math.round(((attendedDaysThisWeek - lateDaysThisWeek) / attendedDaysThisWeek) * 100)
+    : 100;
 
   const afterHoursCount = burnoutMetrics.afterHoursActivityCount || 0;
 
@@ -94,26 +106,31 @@ export const PredictiveAnalyticsView: React.FC = () => {
 
       {/* Telemetry Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Meeting Hours */}
+        {/* Late Attendance — real per-day clock-in data, not a fabricated metric.
+            The app has no meeting platform to source "Weekly Meetings" from. */}
         <div className={`enterprise-card p-4 border ${isDarkMode ? 'bg-[#16181f] border-slate-800' : 'bg-white border-slate-200'}`}>
           <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 mb-2">
             <span className="text-xs font-semibold flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Weekly Meetings
+              <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400" /> Late Attendance
             </span>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              meetingHours > meetingBenchmark
-                ? 'text-rose-700 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+              lateDaysThisWeek === 0
+                ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                : 'text-rose-700 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
             }`}>
-              {meetingHours === 0 ? 'Optimal (0h)' : meetingHours > meetingBenchmark ? `+${Math.round(((meetingHours - meetingBenchmark) / meetingBenchmark) * 100)}% over` : 'On Target'}
+              {lateDaysThisWeek === 0 ? 'On Target' : `${lateDaysThisWeek} Late Day${lateDaysThisWeek > 1 ? 's' : ''}`}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-2xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{meetingHours}h</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">/ {meetingBenchmark}h target</span>
+            <span className={`text-2xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{weeklyOnTimeRate}%</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {lateDaysThisWeek === 0
+                ? `on-time (${attendedDaysThisWeek} day${attendedDaysThisWeek === 1 ? '' : 's'} tracked)`
+                : `on-time · ${formatLateDuration(lateMinutesThisWeek)} late total`}
+            </span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${meetingHours > meetingBenchmark ? 'bg-rose-500' : 'bg-blue-600'}`} style={{ width: `${meetingProgress}%` }} />
+            <div className={`h-full rounded-full transition-all duration-500 ${lateDaysThisWeek === 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${weeklyOnTimeRate}%` }} />
           </div>
         </div>
 
@@ -179,8 +196,8 @@ export const PredictiveAnalyticsView: React.FC = () => {
             </h3>
           </div>
           <div className="flex items-center gap-4 text-xs font-semibold">
-            <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400">
-              <span className="w-3 h-3 rounded-full bg-blue-600" /> Meeting Hours
+            <span className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
+              <span className="w-3 h-3 rounded-full bg-rose-500" /> Late Minutes
             </span>
             <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
               <span className="w-3 h-3 rounded-full bg-amber-500" /> Overtime Hours
@@ -192,9 +209,9 @@ export const PredictiveAnalyticsView: React.FC = () => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={weeklyChartData}>
               <defs>
-                <linearGradient id="colorMeetings" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorOvertime" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
@@ -203,7 +220,8 @@ export const PredictiveAnalyticsView: React.FC = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#2d3242' : '#e2e8f0'} />
               <XAxis dataKey="day" stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} />
-              <YAxis stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} />
+              <YAxis yAxisId="late" hide />
+              <YAxis yAxisId="ot" orientation="right" hide />
               <Tooltip
                 contentStyle={{
                   backgroundColor: isDarkMode ? '#1e2230' : '#ffffff',
@@ -212,8 +230,8 @@ export const PredictiveAnalyticsView: React.FC = () => {
                   color: isDarkMode ? '#ffffff' : '#0f172a'
                 }}
               />
-              <Area type="monotone" dataKey="meetingHours" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorMeetings)" name="Meeting Hours" />
-              <Area type="monotone" dataKey="overtimeHours" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorOvertime)" name="Overtime Hours" />
+              <Area yAxisId="late" type="monotone" dataKey="lateMinutes" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorLate)" name="Late Minutes" />
+              <Area yAxisId="ot" type="monotone" dataKey="overtimeHours" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorOvertime)" name="Overtime Hours" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
