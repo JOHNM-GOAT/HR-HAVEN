@@ -16,7 +16,10 @@ import {
   Smile,
   AlertTriangle,
   Palmtree,
-  Inbox
+  Inbox,
+  Megaphone,
+  Zap,
+  Calendar
 } from 'lucide-react';
 import { StatusChip } from '../common/StatusChip';
 import { EmptyState } from '../common/EmptyState';
@@ -63,12 +66,176 @@ const OutreachComposer: React.FC<{
   );
 };
 
+type DeptActionType = 'focus' | 'checkin' | 'broadcast';
+
+// HR burnout-response action for one department, only ever opened from a row
+// gated to Moderate/High risk. All three action types funnel into the same
+// real delivery pipeline (broadcastToDepartment -> one persisted
+// HrOutreachMessage per active employee, live via the realtime channel,
+// surfaced in each recipient's Notifications bell) — none of them are a
+// local-only status change.
+const DepartmentActionModal: React.FC<{
+  department: string;
+  teamSize: number;
+  riskScore: number;
+  isDarkMode: boolean;
+  onClose: () => void;
+  onSend: (message: string) => void;
+}> = ({ department, teamSize, riskScore, isDarkMode, onClose, onSend }) => {
+  const [actionType, setActionType] = useState<DeptActionType>('focus');
+  const [checkInDate, setCheckInDate] = useState('');
+  const [note, setNote] = useState('');
+  const [broadcastText, setBroadcastText] = useState('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const focusMessage = `🎯 HR has flagged elevated workload signals in ${department} this week (risk score ${riskScore}/100). We're calling a team Focus Session — please block time for deep work and recovery.${note.trim() ? ` ${note.trim()}` : ''}`;
+  const checkInMessage = checkInDate
+    ? `📅 A team wellness check-in has been scheduled for ${department} on ${checkInDate}. Please hold the time — it's a space to talk through workload and support, not a status update.${note.trim() ? ` ${note.trim()}` : ''}`
+    : '';
+  const broadcastMessage = broadcastText.trim();
+
+  const message = actionType === 'focus' ? focusMessage : actionType === 'checkin' ? checkInMessage : broadcastMessage;
+  const canSend = actionType === 'checkin' ? checkInDate.trim().length > 0 : actionType === 'broadcast' ? broadcastMessage.length > 0 : true;
+
+  const handleSend = () => {
+    if (!canSend) return;
+    onSend(message);
+    onClose();
+  };
+
+  const tabs: { type: DeptActionType; label: string; icon: React.ReactNode }[] = [
+    { type: 'focus', label: 'Focus Session', icon: <Zap className="w-3.5 h-3.5" /> },
+    { type: 'checkin', label: 'Schedule Check-In', icon: <Calendar className="w-3.5 h-3.5" /> },
+    { type: 'broadcast', label: 'Broadcast Message', icon: <Megaphone className="w-3.5 h-3.5" /> }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className={`relative w-full max-w-lg rounded-3xl border shadow-2xl p-6 sm:p-7 transition-all ${
+          isDarkMode ? 'bg-[#14161e] border-[#2e323e] text-white shadow-black/60' : 'bg-white border-slate-200 text-slate-900 shadow-xl'
+        }`}
+      >
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h3 className="text-lg font-bold tracking-tight">{department} — Team Wellness Action</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Sends a real message to {teamSize} active {teamSize === 1 ? 'employee' : 'employees'} in this department.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div className={`flex items-center gap-1.5 p-1 rounded-xl border w-full ${isDarkMode ? 'bg-[#12141c] border-[#2e323e]' : 'bg-slate-100 border-slate-200'}`}>
+            {tabs.map(tab => (
+              <button
+                key={tab.type}
+                type="button"
+                onClick={() => setActionType(tab.type)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  actionType === tab.type
+                    ? isDarkMode ? 'bg-[#252834] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {actionType === 'focus' && (
+            <div className="space-y-2">
+              <p className={`text-xs leading-relaxed p-3 rounded-xl border ${isDarkMode ? 'bg-[#0f1116] border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                {focusMessage}
+              </p>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Optional additional note..."
+                rows={2}
+                className={`w-full rounded-xl border px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500/40 ${
+                  isDarkMode ? 'bg-[#0f1116] border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
+                }`}
+              />
+            </div>
+          )}
+
+          {actionType === 'checkin' && (
+            <div className="space-y-2">
+              <input
+                type="date"
+                value={checkInDate}
+                min={todayStr}
+                onChange={e => setCheckInDate(e.target.value)}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                  isDarkMode ? 'bg-[#0f1116] border-slate-700 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500 focus:bg-white'
+                }`}
+              />
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Optional additional note..."
+                rows={2}
+                className={`w-full rounded-xl border px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500/40 ${
+                  isDarkMode ? 'bg-[#0f1116] border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
+                }`}
+              />
+            </div>
+          )}
+
+          {actionType === 'broadcast' && (
+            <textarea
+              value={broadcastText}
+              onChange={e => setBroadcastText(e.target.value)}
+              placeholder={`Message everyone in ${department}...`}
+              rows={3}
+              className={`w-full rounded-xl border px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500/40 ${
+                isDarkMode ? 'bg-[#0f1116] border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
+              }`}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-5 mt-5 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!canSend}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
+          >
+            <Send className="w-4 h-4" />
+            <span>Send to {teamSize} {teamSize === 1 ? 'Employee' : 'Employees'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const HrExecutiveView: React.FC = () => {
   const {
     hrNotifications,
     unreadHrNotificationCount,
     dismissHrNotification,
     sendCaringOutreach,
+    broadcastToDepartment,
     ptoRequests,
     reviewPtoRequest,
     teamShifts,
@@ -77,6 +244,7 @@ export const HrExecutiveView: React.FC = () => {
   } = useWellness();
 
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
+  const [actionModalDept, setActionModalDept] = useState<{ name: string; teamSize: number; riskScore: number } | null>(null);
   const [activeAlertFilter, setActiveAlertFilter] = useState<'all' | 'pending' | 'resolved'>('all');
   const [shiftFilter, setShiftFilter] = useState<'all' | 'active' | 'completed'>('all');
 
@@ -405,11 +573,13 @@ export const HrExecutiveView: React.FC = () => {
                     <th className="p-3.5">Team</th>
                     <th className="p-3.5">Overtime (wk)</th>
                     <th className="p-3.5">Blockers</th>
+                    <th className="p-3.5 text-right">HR Action</th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-[#252834]' : 'divide-slate-200'}`}>
                   {deptStats.map(item => {
                     const deptHighlight = getRiskHighlight(item.riskScore);
+                    const canTrigger = deptHighlight.level === 'moderate' || deptHighlight.level === 'high';
                     return (
                       <tr key={item.department} className={`transition-colors ${isDarkMode ? 'hover:bg-[#1e212b]' : 'hover:bg-slate-50'}`}>
                         <td className={`p-3.5 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.department}</td>
@@ -426,6 +596,22 @@ export const HrExecutiveView: React.FC = () => {
                         </td>
                         <td className={`p-3.5 font-bold ${item.activeBlockerCount > 0 ? (isDarkMode ? 'text-rose-400' : 'text-rose-600') : isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                           {item.activeBlockerCount > 0 ? `${item.activeBlockerCount} active` : 'None'}
+                        </td>
+                        <td className="p-3.5 text-right">
+                          <button
+                            type="button"
+                            disabled={!canTrigger}
+                            onClick={() => setActionModalDept({ name: item.department, teamSize: item.totalMembers, riskScore: item.riskScore })}
+                            title={canTrigger ? `Take a wellness action for ${item.department}` : 'Only available once risk reaches Moderate or High'}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all ${
+                              canTrigger
+                                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer active:scale-95'
+                                : isDarkMode ? 'bg-slate-800/60 text-slate-600 cursor-not-allowed' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            <Megaphone className="w-3.5 h-3.5" />
+                            <span>Trigger</span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -862,6 +1048,17 @@ export const HrExecutiveView: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+
+      {actionModalDept && (
+        <DepartmentActionModal
+          department={actionModalDept.name}
+          teamSize={actionModalDept.teamSize}
+          riskScore={actionModalDept.riskScore}
+          isDarkMode={isDarkMode}
+          onClose={() => setActionModalDept(null)}
+          onSend={(message) => broadcastToDepartment(actionModalDept.name, message)}
+        />
       )}
 
     </div>

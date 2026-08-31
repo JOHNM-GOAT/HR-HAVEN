@@ -89,6 +89,7 @@ interface WellnessContextType {
   resolveHrNotification: (id: string, actionNote?: string) => void;
   hrOutreachMessages: HrOutreachMessage[];
   sendCaringOutreach: (alertId: string, targetTeammate: string, message: string) => void;
+  broadcastToDepartment: (department: string, message: string) => void;
 
   // Global Pomodoro Timer (Overlays across all pages)
   pomodoro: PomodoroTimer;
@@ -1256,6 +1257,41 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: newMessage })
     }).catch(err => console.warn('HR outreach message sync error:', err));
+  };
+
+  // Sends a real message to every active employee in a department - each one
+  // gets its own persisted HrOutreachMessage, delivered through the exact
+  // same pipeline as a single Caring Alert reply (disk + Supabase, live via
+  // the realtime channel, surfaced in that employee's Notifications bell).
+  const broadcastToDepartment = (department: string, message: string) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    const targets = accounts.filter(a => a.department === department && a.status === 'active');
+    if (targets.length === 0) {
+      setToastNotification(`No active employees found in ${department}.`);
+      return;
+    }
+
+    targets.forEach(target => {
+      const newMessage: HrOutreachMessage = {
+        id: `outreach-${Date.now()}-${target.id}`,
+        senderName: userProfile.name || 'HR Team',
+        recipientName: target.name,
+        message: trimmed,
+        createdAt: new Date().toISOString()
+      };
+
+      setHrOutreachMessages(prev => [newMessage, ...prev]);
+
+      fetch('/api/hr-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: newMessage })
+      }).catch(err => console.warn('Department broadcast sync error:', err));
+    });
+
+    setToastNotification(`Sent to ${targets.length} ${targets.length === 1 ? 'employee' : 'employees'} in ${department}.`);
   };
 
   const login = (role: UserRole, accountDetails?: Partial<UserAccount>) => {
@@ -2782,6 +2818,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resolveHrNotification,
         hrOutreachMessages,
         sendCaringOutreach,
+        broadcastToDepartment,
         pomodoro,
         startPomodoro,
         pausePomodoro,
