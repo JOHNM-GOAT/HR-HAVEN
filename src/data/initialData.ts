@@ -90,14 +90,6 @@ export const initialAccessibilitySettings: AccessibilitySettings = {
   batchNotifications: true
 };
 
-export const teamBurnoutOverview = [
-  { department: 'Engineering - Backend', riskScore: 18, status: 'low', totalMembers: 14, overworkingCount: 0 },
-  { department: 'Product Design & UX', riskScore: 15, status: 'low', totalMembers: 8, overworkingCount: 0 },
-  { department: 'Customer Success', riskScore: 22, status: 'low', totalMembers: 12, overworkingCount: 0 },
-  { department: 'Marketing & Growth', riskScore: 12, status: 'low', totalMembers: 10, overworkingCount: 0 },
-  { department: 'Sales Operations', riskScore: 20, status: 'low', totalMembers: 16, overworkingCount: 0 }
-];
-
 export const initialUserAccounts: UserAccount[] = [
   {
     id: 'admin-001',

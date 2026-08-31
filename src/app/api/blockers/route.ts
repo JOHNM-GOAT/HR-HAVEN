@@ -15,6 +15,8 @@ interface BlockerRow {
   score_impact: number | null;
   created_at: string | null;
   resolved_at: string | null;
+  user_name: string | null;
+  department: string | null;
 }
 
 const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : 'Unknown error');
@@ -67,7 +69,9 @@ export async function GET() {
             severity: (b.severity || 'medium') as BlockerSeverity,
             scoreImpact: b.score_impact ?? 0,
             createdAt: b.created_at || new Date().toISOString(),
-            resolvedAt: b.resolved_at || undefined
+            resolvedAt: b.resolved_at || undefined,
+            userName: b.user_name || undefined,
+            department: b.department || undefined
           }));
 
           writeBlockersFile(formatted);
@@ -98,7 +102,9 @@ export async function POST(req: NextRequest) {
         severity: blocker.severity || 'medium',
         scoreImpact: blocker.scoreImpact ?? 0,
         createdAt: blocker.createdAt || new Date().toISOString(),
-        resolvedAt: blocker.resolvedAt
+        resolvedAt: blocker.resolvedAt,
+        userName: userProfile?.name || 'Anonymous Employee',
+        department: userProfile?.department || 'General'
       };
 
       const updated = [newBlocker, ...current];

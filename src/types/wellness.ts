@@ -176,6 +176,10 @@ export interface Blocker {
   scoreImpact: number; // burnout score points this blocker actually added when logged (clamp-aware, so resolving gives back exactly what was added)
   createdAt: string;
   resolvedAt?: string;
+  // Populated server-side for org-wide aggregation (HR Executive View); the
+  // employee-facing Blockers page never reads or displays these.
+  userName?: string;
+  department?: string;
 }
 
 export const BLOCKER_SEVERITY_CONFIG: Record<BlockerSeverity, { label: string; scoreWeight: number; badgeBg: string; dotColor: string }> = {
@@ -209,6 +213,11 @@ export interface MoodLog {
   note?: string;
   isAnonymousToHr: boolean;
   createdAt?: string;
+  // Populated server-side for org-wide aggregation (HR Executive View's
+  // check-in participation rate) — the employee's own mood view never reads
+  // these, and HR never sees mood/note attributed to a name via this field.
+  userName?: string;
+  department?: string;
 }
 
 // The single mapping from a mood check-in to how much it moves the burnout

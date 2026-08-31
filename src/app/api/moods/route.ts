@@ -61,7 +61,12 @@ export async function GET() {
             note: m.note || undefined,
             isAnonymousToHr: m.is_anonymous ?? true,
             timestamp: m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today',
-            createdAt: m.created_at || new Date().toISOString()
+            createdAt: m.created_at || new Date().toISOString(),
+            // Attribution kept for org-wide aggregation (HR Executive View's
+            // check-in participation rate) — never displayed alongside the
+            // mood/note itself, which is what "anonymous to HR" protects.
+            userName: m.user_name || undefined,
+            department: m.department || undefined
           }));
 
           writeMoodsFile(formatted);
@@ -94,7 +99,9 @@ export async function POST(req: NextRequest) {
       note: moodLog.note || undefined,
       isAnonymousToHr: moodLog.isAnonymousToHr ?? true,
       timestamp: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      userName: userProfile?.name || 'Anonymous Employee',
+      department: userProfile?.department || 'General'
     };
 
     // 1. Save to local disk database
