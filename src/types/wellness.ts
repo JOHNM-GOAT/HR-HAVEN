@@ -413,6 +413,19 @@ export interface HrNotification {
   status: 'pending' | 'in_progress' | 'resolved';
   timestamp: string;
   severity: 'low' | 'medium' | 'high';
+  actionNote?: string;
+}
+
+// A real message HR sends to the flagged employee from a Caring Alert —
+// delivered to that employee's Notifications bell (and a live toast if
+// they're online) via the same Supabase realtime channel peer badges use.
+export interface HrOutreachMessage {
+  id: string;
+  alertId?: string;
+  senderName: string;
+  recipientName: string;
+  message: string;
+  createdAt: string;
 }
 
 export interface WorkShiftState {

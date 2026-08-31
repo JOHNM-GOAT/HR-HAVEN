@@ -144,7 +144,20 @@ CREATE TABLE IF NOT EXISTS public.blockers (
 );
 
 -- ==============================================================================
--- 8. ROW LEVEL SECURITY (RLS)
+-- 8. HR_OUTREACH_MESSAGES (HR's reply to a flagged employee from a Caring
+--    Alert — delivered to that employee's Notifications bell in real time)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.hr_outreach_messages (
+  id TEXT PRIMARY KEY DEFAULT ('outreach-' || floor(extract(epoch from now()) * 1000)::TEXT),
+  alert_id TEXT REFERENCES public.hr_notifications(id) ON DELETE SET NULL,
+  sender_name TEXT NOT NULL,
+  recipient_name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==============================================================================
+-- 9. ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pto_requests ENABLE ROW LEVEL SECURITY;
@@ -153,6 +166,7 @@ ALTER TABLE public.mood_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hr_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.work_shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blockers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hr_outreach_messages ENABLE ROW LEVEL SECURITY;
 
 -- The app authenticates its own users (see profiles.password) rather than
 -- using Supabase Auth sessions, so there is no auth.uid() to scope policies
@@ -179,8 +193,11 @@ CREATE POLICY "Public access work_shifts" ON public.work_shifts FOR ALL USING (t
 DROP POLICY IF EXISTS "Public access blockers" ON public.blockers;
 CREATE POLICY "Public access blockers" ON public.blockers FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public access hr_outreach_messages" ON public.hr_outreach_messages;
+CREATE POLICY "Public access hr_outreach_messages" ON public.hr_outreach_messages FOR ALL USING (true) WITH CHECK (true);
+
 -- ==============================================================================
--- 9. REALTIME — every input table streams live inserts/updates/deletes to
+-- 10. REALTIME — every input table streams live inserts/updates/deletes to
 --    subscribed clients (guarded so re-running this script never errors on
 --    a table that's already published)
 -- ==============================================================================
@@ -188,7 +205,7 @@ DO $$
 DECLARE
   t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['profiles', 'pto_requests', 'peer_badges', 'mood_logs', 'hr_notifications', 'work_shifts', 'blockers']
+  FOREACH t IN ARRAY ARRAY['profiles', 'pto_requests', 'peer_badges', 'mood_logs', 'hr_notifications', 'work_shifts', 'blockers', 'hr_outreach_messages']
   LOOP
     IF NOT EXISTS (
       SELECT 1 FROM pg_publication_tables
@@ -200,7 +217,7 @@ BEGIN
 END $$;
 
 -- ==============================================================================
--- 10. SEED DATA (bootstrap admin account only — no fabricated demo rows,
+-- 11. SEED DATA (bootstrap admin account only — no fabricated demo rows,
 --     since the app itself filters out placeholder PTO/mood/badge seed
 --     records on read)
 -- ==============================================================================

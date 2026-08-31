@@ -17,6 +17,7 @@ import {
   ThemeMode,
   PomodoroTimer,
   HrNotification,
+  HrOutreachMessage,
   DeletedUserAccount,
   WorkShiftState,
   WorkShiftRecord,
@@ -86,6 +87,8 @@ interface WellnessContextType {
   unreadHrNotificationCount: number;
   dismissHrNotification: (id: string) => void;
   resolveHrNotification: (id: string, actionNote?: string) => void;
+  hrOutreachMessages: HrOutreachMessage[];
+  sendCaringOutreach: (alertId: string, targetTeammate: string, message: string) => void;
 
   // Global Pomodoro Timer (Overlays across all pages)
   pomodoro: PomodoroTimer;
@@ -688,6 +691,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accounts, setAccounts] = useState<UserAccount[]>(initialUserAccounts);
   const [deletedAccounts, setDeletedAccounts] = useState<DeletedUserAccount[]>(initialDeletedAccounts);
   const [hrNotifications, setHrNotifications] = useState<HrNotification[]>(initialHrNotifications);
+  const [hrOutreachMessages, setHrOutreachMessages] = useState<HrOutreachMessage[]>([]);
   const isSupabaseLive = isSupabaseConfigured();
 
   // 1. Load persisted data & authentication session from server database & localStorage on mount
@@ -792,6 +796,19 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               }
             }
           } catch (e) {}
+        })(),
+
+        // HR outreach messages (HR -> flagged employee, sent from a Caring Alert)
+        (async () => {
+          try {
+            const resOutreach = await fetch('/api/hr-messages');
+            if (resOutreach.ok) {
+              const outreachData = await resOutreach.json();
+              if (Array.isArray(outreachData.messages)) {
+                setHrOutreachMessages(outreachData.messages);
+              }
+            }
+          } catch {}
         })(),
 
         // Moods
@@ -1136,6 +1153,28 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           })
           .catch(() => {});
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hr_outreach_messages' }, () => {
+        fetch('/api/hr-messages')
+          .then(r => r.json())
+          .then(data => {
+            if (!Array.isArray(data.messages)) return;
+            setHrOutreachMessages(prev => {
+              const prevIds = new Set(prev.map(m => m.id));
+              const newMessages: HrOutreachMessage[] = data.messages.filter((m: HrOutreachMessage) => !prevIds.has(m.id));
+              const currentUserMessage = newMessages.find((m: HrOutreachMessage) => {
+                const r = (m.recipientName || '').toLowerCase();
+                const un = (userProfile.name || '').toLowerCase();
+                const ue = (userProfile.email || '').toLowerCase();
+                return (un && (r === un || r.includes(un))) || (ue && r === ue);
+              });
+              if (currentUserMessage) {
+                setToastNotification(`💙 ${currentUserMessage.senderName} from HR reached out: "${currentUserMessage.message}"`, true);
+              }
+              return data.messages;
+            });
+          })
+          .catch(() => {});
+      })
       .subscribe();
 
     return () => {
@@ -1189,6 +1228,34 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'resolve', id, actionNote })
     }).catch(err => console.warn('Notification resolve error:', err));
+  };
+
+  // Sends a real message from HR to the flagged employee and resolves the
+  // originating Caring Alert with that exact message as its action note -
+  // the employee sees it in their Notifications bell (and a live toast if
+  // they're online) via the realtime channel above, not just a status change
+  // on HR's own side.
+  const sendCaringOutreach = (alertId: string, targetTeammate: string, message: string) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    const newMessage: HrOutreachMessage = {
+      id: `outreach-${Date.now()}`,
+      alertId,
+      senderName: userProfile.name || 'HR Team',
+      recipientName: targetTeammate,
+      message: trimmed,
+      createdAt: new Date().toISOString()
+    };
+
+    setHrOutreachMessages(prev => [newMessage, ...prev]);
+    resolveHrNotification(alertId, trimmed);
+
+    fetch('/api/hr-messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: newMessage })
+    }).catch(err => console.warn('HR outreach message sync error:', err));
   };
 
   const login = (role: UserRole, accountDetails?: Partial<UserAccount>) => {
@@ -2713,6 +2780,8 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         unreadHrNotificationCount,
         dismissHrNotification,
         resolveHrNotification,
+        hrOutreachMessages,
+        sendCaringOutreach,
         pomodoro,
         startPomodoro,
         pausePomodoro,

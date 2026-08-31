@@ -14,6 +14,7 @@ export const NotificationsBell: React.FC = () => {
     batchedNotifications,
     clearBatchedNotifications,
     setActiveTab,
+    hrOutreachMessages,
     isDarkMode
   } = useWellness();
 
@@ -86,8 +87,22 @@ export const NotificationsBell: React.FC = () => {
       };
     });
 
+  const receivedOutreachNotifications = hrOutreachMessages
+    .filter(m => isUserMentioned(m.recipientName))
+    .map(m => ({
+      id: `notif-outreach-${m.id}`,
+      type: 'outreach' as const,
+      icon: '💙',
+      title: 'HR Reached Out',
+      message: `${m.senderName}: "${m.message}"`,
+      time: new Date(m.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      unread: true,
+      actionTab: undefined
+    }));
+
   const rawNotificationsList = [
     ...receivedBadgeNotifications,
+    ...receivedOutreachNotifications,
     ...(upcomingLeave ? [{
       id: 'notif-leave',
       type: 'leave' as const,

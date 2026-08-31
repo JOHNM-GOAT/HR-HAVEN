@@ -22,12 +22,53 @@ import { StatusChip } from '../common/StatusChip';
 import { EmptyState } from '../common/EmptyState';
 import { Tooltip } from '../common/Tooltip';
 
+// Free-text message HR sends directly to the flagged employee. Each pending
+// alert card gets its own instance (and its own draft state) via .map().
+const OutreachComposer: React.FC<{
+  targetTeammate: string;
+  isDarkMode: boolean;
+  onSend: (message: string) => void;
+}> = ({ targetTeammate, isDarkMode, onSend }) => {
+  const [draft, setDraft] = useState('');
+
+  const handleSend = () => {
+    if (!draft.trim()) return;
+    onSend(draft);
+    setDraft('');
+  };
+
+  return (
+    <div className="space-y-2">
+      <textarea
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        placeholder={`Message ${targetTeammate} directly...`}
+        rows={2}
+        className={`w-full rounded-xl border px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500/40 ${
+          isDarkMode ? 'bg-[#0f1116] border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
+        }`}
+      />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={!draft.trim()}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Send Message</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const HrExecutiveView: React.FC = () => {
   const {
     hrNotifications,
     unreadHrNotificationCount,
     dismissHrNotification,
-    resolveHrNotification,
+    sendCaringOutreach,
     ptoRequests,
     reviewPtoRequest,
     teamShifts,
@@ -790,36 +831,31 @@ export const HrExecutiveView: React.FC = () => {
                       &ldquo;{alert.reason}&rdquo;
                     </p>
 
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <span className={`text-[11px] flex items-center gap-1 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        <Clock className="w-3 h-3" />
-                        {alert.timestamp}
-                      </span>
+                    <span className={`text-[11px] flex items-center gap-1 font-medium mb-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <Clock className="w-3 h-3" />
+                      {alert.timestamp}
+                    </span>
 
-                      {alert.status === 'pending' ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => resolveHrNotification(alert.id, `1:1 Wellness check-in scheduled with ${alert.targetTeammate}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
-                          >
-                            <HeartHandshake className="w-3.5 h-3.5" />
-                            <span>1:1 Check-In</span>
-                          </button>
-                          <button
-                            onClick={() => resolveHrNotification(alert.id, 'Dispatched EAP wellness materials & recovery days')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all border cursor-pointer active:scale-95 ${isDarkMode ? 'bg-blue-950 text-blue-300 border-blue-800 hover:bg-blue-900' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Send EAP</span>
-                          </button>
-                        </div>
-                      ) : (
+                    {alert.status === 'pending' ? (
+                      <OutreachComposer
+                        targetTeammate={alert.targetTeammate}
+                        isDarkMode={isDarkMode}
+                        onSend={(msg) => sendCaringOutreach(alert.id, alert.targetTeammate, msg)}
+                      />
+                    ) : (
+                      <div className="space-y-2">
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           <CheckCircle2 className="w-4 h-4" />
                           <span>Outreach Completed</span>
                         </span>
-                      )}
-                    </div>
+                        {alert.actionNote && (
+                          <p className={`text-xs leading-relaxed p-3 rounded-xl border flex items-start gap-2 ${isDarkMode ? 'bg-blue-950/20 border-blue-900/40 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+                            <Send className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                            <span>Sent to {alert.targetTeammate}: &ldquo;{alert.actionNote}&rdquo;</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
