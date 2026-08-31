@@ -213,7 +213,7 @@ export const OverviewDashboard: React.FC = () => {
             : 'high_ot';
 
           return (
-            <div className={`enterprise-card p-4 sm:p-6 border lg:row-span-2 ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col justify-between`}>
+            <div className={`enterprise-card p-4 sm:p-6 border lg:row-span-2 ${isDarkMode ? 'border-slate-800 bg-[#16181f] text-white' : 'border-slate-200 bg-white'} flex flex-col`}>
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -288,97 +288,102 @@ export const OverviewDashboard: React.FC = () => {
                     🍱 Lunch: 12PM–1PM
                   </div>
                 </div>
+              </div>
 
-                {/* Circular Shift Gauge Visual */}
-                <div className="flex flex-col items-center my-4">
-                  <div className="relative w-40 h-40 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="text-slate-100 dark:text-slate-800"
-                        strokeWidth="3.8"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className={
-                          workShift.overtimeSeconds > 0
-                            ? 'text-amber-500'
-                            : workShift.isClockedIn
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-slate-300 dark:text-slate-700'
-                        }
-                        strokeDasharray={`${workShift.isClockedIn || workShift.totalWorkedSeconds > 0 ? shiftProgress : 0}, 100`}
-                        strokeWidth="3.8"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="absolute flex flex-col items-center">
-                      <span className={`text-2xl sm:text-[26px] font-black font-mono tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {formatTimer(workShift.totalWorkedSeconds)}
-                      </span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${
-                        isLunchWindow && workShift.isClockedIn
-                          ? 'text-emerald-500 font-extrabold'
-                          : workShift.overtimeSeconds > 0
-                          ? 'text-amber-500 font-extrabold'
+              {/* Circular Shift Gauge Visual — grows to absorb whatever extra
+                  height this tile gets from lg:row-span-2 matching the taller
+                  Burnout+Mood column, instead of leaving a dead gap between
+                  the buttons and the This Week footer below. On breakpoints
+                  where the card isn't stretched, flex-1 has no slack to fill
+                  and this renders exactly as before. */}
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 my-2">
+                <div className="relative w-40 h-40 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-slate-100 dark:text-slate-800"
+                      strokeWidth="3.8"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className={
+                        workShift.overtimeSeconds > 0
+                          ? 'text-amber-500'
                           : workShift.isClockedIn
                           ? 'text-blue-600 dark:text-blue-400'
-                          : 'text-slate-400'
-                      }`}>
-                        {isLunchWindow && workShift.isClockedIn
-                          ? '🍱 Lunch Hour'
-                          : workShift.overtimeSeconds > 0
-                          ? `+${formatTimer(workShift.overtimeSeconds)} OT`
-                          : workShift.isClockedIn
-                          ? 'Active Shift'
-                          : 'Off Duty'}
-                      </span>
-                    </div>
+                          : 'text-slate-300 dark:text-slate-700'
+                      }
+                      strokeDasharray={`${workShift.isClockedIn || workShift.totalWorkedSeconds > 0 ? shiftProgress : 0}, 100`}
+                      strokeWidth="3.8"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center">
+                    <span className={`text-2xl sm:text-[26px] font-black font-mono tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {formatTimer(workShift.totalWorkedSeconds)}
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${
+                      isLunchWindow && workShift.isClockedIn
+                        ? 'text-emerald-500 font-extrabold'
+                        : workShift.overtimeSeconds > 0
+                        ? 'text-amber-500 font-extrabold'
+                        : workShift.isClockedIn
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-slate-400'
+                    }`}>
+                      {isLunchWindow && workShift.isClockedIn
+                        ? '🍱 Lunch Hour'
+                        : workShift.overtimeSeconds > 0
+                        ? `+${formatTimer(workShift.overtimeSeconds)} OT`
+                        : workShift.isClockedIn
+                        ? 'Active Shift'
+                        : 'Off Duty'}
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Interactive Clock-In / Clock-Out & Reset Action Buttons */}
-                <div className="mt-1 flex items-center gap-2">
+              {/* Interactive Clock-In / Clock-Out & Reset Action Buttons */}
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  onClick={toggleClockInOut}
+                  className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 ${
+                    workShift.isClockedIn
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                  }`}
+                >
+                  {workShift.isClockedIn ? (
+                    <>
+                      <Moon className="w-4 h-4" />
+                      <span>Clock Out ({formatTimer(workShift.totalWorkedSeconds)})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-4 h-4" />
+                      <span>Clock In (Start Workday)</span>
+                    </>
+                  )}
+                </button>
+
+                {(workShift.totalWorkedSeconds > 0 || workShift.isClockedIn) && (
                   <button
-                    onClick={toggleClockInOut}
-                    className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 ${
-                      workShift.isClockedIn
-                        ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                    type="button"
+                    onClick={resetWorkShift}
+                    title="Reset shift timer to 00:00:00"
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+                      isDarkMode
+                        ? 'bg-slate-800/80 hover:bg-rose-950/60 border-slate-700 hover:border-rose-700 text-slate-400 hover:text-rose-300'
+                        : 'bg-slate-100 hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600'
                     }`}
                   >
-                    {workShift.isClockedIn ? (
-                      <>
-                        <Moon className="w-4 h-4" />
-                        <span>Clock Out ({formatTimer(workShift.totalWorkedSeconds)})</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-4 h-4" />
-                        <span>Clock In (Start Workday)</span>
-                      </>
-                    )}
+                    <RotateCcw className="w-4 h-4" />
                   </button>
-
-                  {(workShift.totalWorkedSeconds > 0 || workShift.isClockedIn) && (
-                    <button
-                      type="button"
-                      onClick={resetWorkShift}
-                      title="Reset shift timer to 00:00:00"
-                      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
-                        isDarkMode
-                          ? 'bg-slate-800/80 hover:bg-rose-950/60 border-slate-700 hover:border-rose-700 text-slate-400 hover:text-rose-300'
-                          : 'bg-slate-100 hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600'
-                      }`}
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
               {/* This Week — same getLateMinutes/9AM-standard definition as the Late
