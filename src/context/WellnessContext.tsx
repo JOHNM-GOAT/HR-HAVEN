@@ -32,7 +32,8 @@ import {
   computeWorkedSeconds,
   Blocker,
   BlockerSeverity,
-  BLOCKER_SEVERITY_CONFIG
+  BLOCKER_SEVERITY_CONFIG,
+  getMoodScoreImpact
 } from '../types/wellness';
 import {
   initialBurnoutMetrics,
@@ -251,8 +252,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         ptoDaysUsed: 0,
         ptoDaysRemaining: 20,
         consecutiveWorkDays: 0,
-        trend: 'stable' as const,
-        riskFactors: []
+        trend: 'stable' as const
       }
     };
   }
@@ -290,8 +290,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         ptoDaysUsed: 1,
         ptoDaysRemaining: 19,
         consecutiveWorkDays: 3,
-        trend: 'improving' as const,
-        riskFactors: ['Active daily HR interviews']
+        trend: 'improving' as const
       }
     };
   }
@@ -329,8 +328,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
         ptoDaysUsed: 0,
         ptoDaysRemaining: 20,
         consecutiveWorkDays: 4,
-        trend: 'stable' as const,
-        riskFactors: ['High meeting concentration', 'Sprint deadline approaching']
+        trend: 'stable' as const
       }
     };
   }
@@ -357,8 +355,7 @@ const getAccountInitialState = (email: string, role: UserRole, name?: string) =>
       ptoDaysUsed: 0,
       ptoDaysRemaining: 20,
       consecutiveWorkDays: 0,
-      trend: 'stable' as const,
-      riskFactors: []
+      trend: 'stable' as const
     }
   };
 };
@@ -1319,12 +1316,7 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
     setToastNotification('Mood check-in logged and saved to the database! Thank you for sharing.');
 
-    let scoreChange = 0;
-    if (energyLevel === 5 || mood === 'thriving') scoreChange = -8;
-    else if (energyLevel === 4 || mood === 'good') scoreChange = -4;
-    else if (energyLevel === 3 || mood === 'okay') scoreChange = -1;
-    else if (energyLevel === 2 || mood === 'stressed') scoreChange = 6;
-    else if (energyLevel === 1 || mood === 'exhausted') scoreChange = 12;
+    const scoreChange = getMoodScoreImpact(mood, energyLevel);
 
     setBurnoutMetrics(prev => {
       const newScore = Math.min(100, Math.max(0, prev.overallScore + scoreChange));

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useWellness } from '../../context/WellnessContext';
-import { getBurnoutRiskConfig, getLateMinutes, formatLateDuration } from '../../types/wellness';
+import { getBurnoutRiskConfig, getLateMinutes, formatLateDuration, isSameLocalDay, getRiskFactors } from '../../types/wellness';
 import {
   Activity,
   Clock,
@@ -23,6 +23,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
     userProfile,
     isDarkMode,
     blockers,
+    moodLogs,
     setActiveTab
   } = useWellness();
 
@@ -55,11 +56,19 @@ export const PredictiveAnalyticsView: React.FC = () => {
       clockInForDay = workShift.clockInTime || clockInForDay;
     }
 
+    // Blockers logged that calendar day — same createdAt-based day match used
+    // for today's mood logs, just applied across the whole week here.
+    const blockersLoggedCount = blockers.filter(b => {
+      const created = new Date(b.createdAt);
+      return created.getFullYear() === dayDate.getFullYear() && created.getMonth() === dayDate.getMonth() && created.getDate() === dayDate.getDate();
+    }).length;
+
     return {
       day: dayName,
       date: dateStr,
       overtimeHours: parseFloat((otSecs / 3600).toFixed(1)),
       lateMinutes: getLateMinutes(clockInForDay),
+      blockersLogged: blockersLoggedCount,
       hasShift
     };
   });
@@ -83,7 +92,8 @@ export const PredictiveAnalyticsView: React.FC = () => {
   // Single source of truth: same score & level driving the Dashboard's Burnout Risk Gauge.
   const computedScore = burnoutMetrics.overallScore;
   const riskConfig = getBurnoutRiskConfig(burnoutMetrics.riskLevel);
-  const riskFactors = burnoutMetrics.riskFactors ?? [];
+  const todaysMoodLogs = moodLogs.filter(log => isSameLocalDay(log.createdAt));
+  const riskFactors = getRiskFactors(blockers, todaysMoodLogs);
 
   return (
     <div className="space-y-6">
@@ -205,12 +215,15 @@ export const PredictiveAnalyticsView: React.FC = () => {
               Weekly Workload Telemetry Trend
             </h3>
           </div>
-          <div className="flex items-center gap-4 text-xs font-semibold">
+          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
             <span className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
               <span className="w-3 h-3 rounded-full bg-rose-500" /> Late Minutes
             </span>
             <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
               <span className="w-3 h-3 rounded-full bg-amber-500" /> Overtime Hours
+            </span>
+            <span className="flex items-center gap-1.5 text-violet-700 dark:text-violet-400">
+              <span className="w-3 h-3 rounded-full bg-violet-500" /> Blockers Logged
             </span>
           </div>
         </div>
@@ -227,11 +240,16 @@ export const PredictiveAnalyticsView: React.FC = () => {
                   <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="colorBlockers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#2d3242' : '#e2e8f0'} />
               <XAxis dataKey="day" stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} />
               <YAxis yAxisId="late" hide />
               <YAxis yAxisId="ot" orientation="right" hide />
+              <YAxis yAxisId="blockers" hide />
               <Tooltip
                 contentStyle={{
                   backgroundColor: isDarkMode ? '#1e2230' : '#ffffff',
@@ -242,6 +260,7 @@ export const PredictiveAnalyticsView: React.FC = () => {
               />
               <Area yAxisId="late" type="monotone" dataKey="lateMinutes" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorLate)" name="Late Minutes" />
               <Area yAxisId="ot" type="monotone" dataKey="overtimeHours" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorOvertime)" name="Overtime Hours" />
+              <Area yAxisId="blockers" type="monotone" dataKey="blockersLogged" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorBlockers)" name="Blockers Logged" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -265,20 +284,23 @@ export const PredictiveAnalyticsView: React.FC = () => {
               <div className="flex-1">
                 <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Optimal Work-Life Balance Active</p>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  No excessive meeting overload or overtime strain detected for this week. Keep up healthy boundaries!
+                  No active blockers and no strained mood check-ins logged today. Keep up healthy boundaries!
                 </p>
               </div>
             </div>
           ) : (
-            riskFactors.map((factor, index) => (
-              <div key={index} className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode ? 'bg-[#12141a] border-[#262b3a]' : 'bg-slate-50 border-slate-200'}`}>
+            riskFactors.map(factor => (
+              <div key={factor.id} className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode ? 'bg-[#12141a] border-[#262b3a]' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
                   <Info className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{factor}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{factor.label}</p>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 shrink-0">+{factor.scoreImpact} risk</span>
+                  </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                    Suggested Action: Schedule 2 hours of Focus Mode tomorrow or book a 1-day mental health rest day.
+                    Suggested Action: {factor.action}
                   </p>
                 </div>
               </div>

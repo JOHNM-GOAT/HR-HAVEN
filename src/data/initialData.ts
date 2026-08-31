@@ -49,8 +49,7 @@ export const initialBurnoutMetrics: BurnoutMetrics = {
   ptoDaysUsed: 0,
   ptoDaysRemaining: 20,
   consecutiveWorkDays: 0,
-  trend: 'stable',
-  riskFactors: []
+  trend: 'stable'
 };
 
 export const initialMoodLogs: MoodLog[] = [];

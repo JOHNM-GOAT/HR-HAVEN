@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useWellness } from '../../context/WellnessContext';
 import { LeaveCategory } from '../../types/wellness';
+import { Tooltip } from '../common/Tooltip';
 import {
   Sparkles,
   X,
@@ -137,29 +138,31 @@ export const PtoRequestModal: React.FC = () => {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {categories.map(cat => (
-                <button
-                  type="button"
-                  key={cat.type}
-                  onClick={() => setCategory(cat.type)}
-                  className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${category === cat.type
-                      ? 'border-blue-500 bg-blue-500/10 shadow-xs ring-1 ring-blue-500'
-                      : isDarkMode
-                        ? 'border-[#262a36] bg-[#1a1c25] hover:border-slate-600'
-                        : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300'
-                    }`}
-                >
-                  <div className="w-full">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="text-xs font-bold truncate">{cat.label}</span>
+                <div key={cat.type} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setCategory(cat.type)}
+                    className={`w-full p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${category === cat.type
+                        ? 'border-blue-500 bg-blue-500/10 shadow-xs ring-1 ring-blue-500'
+                        : isDarkMode
+                          ? 'border-[#262a36] bg-[#1a1c25] hover:border-slate-600'
+                          : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300'
+                      }`}
+                  >
+                    <div className="w-full pr-6">
+                      <span className="text-xs font-bold truncate block">{cat.label}</span>
+                      <span className={`inline-block mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full border ${cat.badgeColor}`}>
+                        {cat.badge}
+                      </span>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                      {cat.desc}
-                    </p>
-                    <span className={`inline-block mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full border ${cat.badgeColor}`}>
-                      {cat.badge}
-                    </span>
+                  </button>
+                  {/* Full description moved into a help-icon tooltip instead of an
+                      inline paragraph — the on-screen text was truncating mid-word
+                      on these narrow cards. */}
+                  <div className="absolute top-2 right-2">
+                    <Tooltip icon="help" align="right" content={cat.desc} />
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>

@@ -165,7 +165,6 @@ export interface BurnoutMetrics {
   ptoDaysRemaining: number;
   consecutiveWorkDays: number;
   trend: 'improving' | 'stable' | 'worsening';
-  riskFactors: string[];
 }
 
 export type BlockerSeverity = 'low' | 'medium' | 'high';
@@ -211,6 +210,64 @@ export interface MoodLog {
   isAnonymousToHr: boolean;
   createdAt?: string;
 }
+
+// The single mapping from a mood check-in to how much it moves the burnout
+// score. Shared so the context (which applies it) and the risk-factor list
+// (which explains it) never drift apart.
+export const getMoodScoreImpact = (mood: MoodType, energyLevel: number): number => {
+  if (energyLevel === 5 || mood === 'thriving') return -8;
+  if (energyLevel === 4 || mood === 'good') return -4;
+  if (energyLevel === 3 || mood === 'okay') return -1;
+  if (energyLevel === 2 || mood === 'stressed') return 6;
+  if (energyLevel === 1 || mood === 'exhausted') return 12;
+  return 0;
+};
+
+export const isSameLocalDay = (iso?: string, now: Date = new Date()): boolean => {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+};
+
+export interface RiskFactor {
+  id: string;
+  label: string;
+  action: string;
+  scoreImpact: number;
+}
+
+// Every entry here is traceable to an actual score-moving event — an active
+// blocker's real scoreImpact, or today's mood check-ins that pushed the score
+// up. Nothing here is seeded or guessed; if nothing is actually raising the
+// score, this returns an empty list.
+export const getRiskFactors = (blockers: Blocker[], todaysMoodLogs: MoodLog[]): RiskFactor[] => {
+  const factors: RiskFactor[] = [];
+
+  blockers
+    .filter(b => !b.resolvedAt)
+    .forEach(b => {
+      factors.push({
+        id: `blocker-${b.id}`,
+        label: `Active blocker: "${b.description}"`,
+        action: 'Resolve it on the Workflow Blockers page to bring your risk score back down.',
+        scoreImpact: b.scoreImpact
+      });
+    });
+
+  todaysMoodLogs.forEach(log => {
+    const impact = getMoodScoreImpact(log.mood, log.energyLevel);
+    if (impact > 0) {
+      factors.push({
+        id: `mood-${log.id}`,
+        label: `Mood check-in logged as "${log.mood}"`,
+        action: 'Take a short break, or log an improved check-in once you feel better.',
+        scoreImpact: impact
+      });
+    }
+  });
+
+  return factors.sort((a, b) => b.scoreImpact - a.scoreImpact);
+};
 
 export interface WellnessReminder {
   id: string;
