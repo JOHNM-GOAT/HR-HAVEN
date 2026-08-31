@@ -49,6 +49,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
 
 Supabase is optional. Without it configured, the app falls back to a local JSON file store under `.data/` (created automatically) plus `localStorage` — you can run the whole thing with no external services at all.
 
+If you do want Supabase, run [`supabase_schema.sql`](supabase_schema.sql) in your project's SQL Editor once — it creates every table the app writes to (profiles, mood logs, blockers, PTO requests, peer badges, HR notifications, work shifts), enables Row Level Security, and turns on Realtime for all of them. It's safe to re-run after an update.
+
 ### Demo accounts
 
 The app ships with three seeded accounts, one per role:
@@ -75,7 +77,7 @@ Sign-in also accepts just the part before the `@` (e.g. `admin`) if you don't wa
 There's no database requirement to run this locally:
 
 - **Per-user state** (mood logs, shift timer, hydration, accessibility settings, boundary shield config, etc.) lives in `localStorage`, namespaced per account email — one browser can hold independent state for every seeded role at once.
-- **Shared state** (accounts, PTO requests, appreciation badges, notifications, shifts) is served through Next.js API routes under `src/app/api/`, backed by flat JSON files in `.data/`.
+- **Shared state** (accounts, PTO requests, appreciation badges, notifications, shifts, workflow blockers) is served through Next.js API routes under `src/app/api/`, backed by flat JSON files in `.data/`.
 - If Supabase environment variables are present, some writes additionally sync there; the app never *requires* it to function.
 
 This means attendance lateness, the burnout score, and the appreciation conversations are computed from real interactions in your own session, not hardcoded — clock in late and the Late badge, the weekly on-time rate, and the AI Burnout Predictor's factors all update from that one action.

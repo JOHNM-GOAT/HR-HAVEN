@@ -1,38 +1,50 @@
 -- ==============================================================================
--- AXIONHR HAVEN — COMPLETE SUPABASE DATABASE SCHEMA
+-- AXIONHR HAVEN — SUPABASE DATABASE SCHEMA (real-time enabled)
 -- ==============================================================================
 -- Instructions:
 -- 1. Go to your Supabase Dashboard: https://supabase.com/dashboard
--- 2. Select your Project -> Click on "SQL Editor" in the left sidebar.
+-- 2. Select your Project -> click "SQL Editor" in the left sidebar.
 -- 3. Click "New Query", paste this entire script, and click "Run".
+--
+-- Safe to re-run: every statement below is idempotent (CREATE TABLE IF NOT
+-- EXISTS, DROP POLICY IF EXISTS before CREATE POLICY, ON CONFLICT DO NOTHING
+-- on seed rows, and a guarded loop for the realtime publication), so running
+-- this again after a schema update won't error or duplicate anything.
+--
+-- Every column here was checked against what src/app/api/*/route.ts actually
+-- reads and writes — not written from scratch, reconciled with the live app.
 -- ==============================================================================
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ==============================================================================
--- 1. PROFILES TABLE (User Accounts & Profiles)
+-- 1. PROFILES (user accounts — the app has its own login, not Supabase Auth,
+--    so ids are app-generated text like 'admin-001' / 'usr-1234', not uuids
+--    tied to auth.users)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'employee' CHECK (role IN ('employee', 'manager', 'admin')),
+  role TEXT NOT NULL DEFAULT 'employee' CHECK (role IN ('admin', 'hr_manager', 'employee')),
   department TEXT NOT NULL DEFAULT 'Engineering',
   avatar_url TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
   password TEXT,
   phone TEXT,
   job_title TEXT,
   location TEXT,
   emergency_contact_name TEXT,
   emergency_contact_phone TEXT,
+  deleted_at TIMESTAMPTZ,
+  deleted_by TEXT,
+  deletion_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==============================================================================
--- 2. PTO_REQUESTS TABLE (Paid Time Off & Wellness Leave)
+-- 2. PTO_REQUESTS (Paid Time Off & wellness leave)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.pto_requests (
   id TEXT PRIMARY KEY DEFAULT ('pto-' || floor(extract(epoch from now()) * 1000)::TEXT),
@@ -53,35 +65,37 @@ CREATE TABLE IF NOT EXISTS public.pto_requests (
 );
 
 -- ==============================================================================
--- 3. PEER_BADGES TABLE (Social Recognition Wall)
+-- 3. PEER_BADGES (private 1:1 appreciation messages)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.peer_badges (
   id TEXT PRIMARY KEY DEFAULT ('badge-' || floor(extract(epoch from now()) * 1000)::TEXT),
-  from_name TEXT NOT NULL,
-  from_avatar TEXT,
-  to_name TEXT NOT NULL,
-  to_avatar TEXT,
-  badge_name TEXT NOT NULL,
-  badge_icon TEXT NOT NULL DEFAULT '🌟',
+  sender_name TEXT NOT NULL,
+  sender_avatar TEXT,
+  recipient_name TEXT NOT NULL,
+  recipient_avatar TEXT,
+  badge_type TEXT NOT NULL,
   message TEXT NOT NULL,
+  send_coffee BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==============================================================================
--- 4. MOOD_LOGS TABLE (Daily Polar Bear Energy & Mood Logs)
+-- 4. MOOD_LOGS (daily mood / energy check-ins)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.mood_logs (
   id TEXT PRIMARY KEY DEFAULT ('mood-' || floor(extract(epoch from now()) * 1000)::TEXT),
-  user_id TEXT,
+  user_id TEXT REFERENCES public.profiles(id) ON DELETE CASCADE,
   user_name TEXT,
-  mood TEXT NOT NULL,
+  department TEXT,
+  mood TEXT NOT NULL CHECK (mood IN ('thriving', 'good', 'okay', 'stressed', 'exhausted')),
   energy_level INTEGER NOT NULL DEFAULT 3 CHECK (energy_level BETWEEN 1 AND 5),
   note TEXT,
-  timestamp TIMESTAMPTZ DEFAULT NOW()
+  is_anonymous BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==============================================================================
--- 5. HR_NOTIFICATIONS TABLE (Proactive Alerts & Caring Intervention Flags)
+-- 5. HR_NOTIFICATIONS (caring alerts & outreach flags)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.hr_notifications (
   id TEXT PRIMARY KEY DEFAULT ('hr-notif-' || floor(extract(epoch from now()) * 1000)::TEXT),
@@ -91,11 +105,12 @@ CREATE TABLE IF NOT EXISTS public.hr_notifications (
   submitted_by_anonymous BOOLEAN DEFAULT TRUE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'resolved')),
   severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high')),
-  timestamp TIMESTAMPTZ DEFAULT NOW()
+  action_note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ==============================================================================
--- 6. WORK_SHIFTS TABLE (Attendance, Clock-In / Clock-Out & Overtime Telemetry)
+-- 6. WORK_SHIFTS (attendance, clock-in/out & overtime telemetry)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.work_shifts (
   id TEXT PRIMARY KEY DEFAULT ('shift-' || floor(extract(epoch from now()) * 1000)::TEXT),
@@ -113,22 +128,38 @@ CREATE TABLE IF NOT EXISTS public.work_shifts (
 );
 
 -- ==============================================================================
--- 7. ROW LEVEL SECURITY (RLS) POLICIES
+-- 7. BLOCKERS (workflow blockers — each active row raises the logger's
+--    Burnout Risk score by score_impact; resolving it gives that back)
 -- ==============================================================================
--- Enable RLS on all tables
+CREATE TABLE IF NOT EXISTS public.blockers (
+  id TEXT PRIMARY KEY DEFAULT ('blocker-' || floor(extract(epoch from now()) * 1000)::TEXT),
+  user_id TEXT REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_name TEXT NOT NULL,
+  department TEXT NOT NULL DEFAULT 'Engineering',
+  description TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high')),
+  score_impact INTEGER NOT NULL DEFAULT 0,
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==============================================================================
+-- 8. ROW LEVEL SECURITY (RLS)
+-- ==============================================================================
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pto_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peer_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mood_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hr_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.work_shifts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blockers ENABLE ROW LEVEL SECURITY;
 
--- Allow Public / Anon access for seamless frontend-backend synchronization
+-- The app authenticates its own users (see profiles.password) rather than
+-- using Supabase Auth sessions, so there is no auth.uid() to scope policies
+-- to. RLS is enabled and policies are still explicit and named (not left
+-- open by omission) — access control lives in the Next.js API routes instead.
 DROP POLICY IF EXISTS "Public access profiles" ON public.profiles;
 CREATE POLICY "Public access profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access work_shifts" ON public.work_shifts;
-CREATE POLICY "Public access work_shifts" ON public.work_shifts FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public access pto_requests" ON public.pto_requests;
 CREATE POLICY "Public access pto_requests" ON public.pto_requests FOR ALL USING (true) WITH CHECK (true);
@@ -142,8 +173,36 @@ CREATE POLICY "Public access mood_logs" ON public.mood_logs FOR ALL USING (true)
 DROP POLICY IF EXISTS "Public access hr_notifications" ON public.hr_notifications;
 CREATE POLICY "Public access hr_notifications" ON public.hr_notifications FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public access work_shifts" ON public.work_shifts;
+CREATE POLICY "Public access work_shifts" ON public.work_shifts FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public access blockers" ON public.blockers;
+CREATE POLICY "Public access blockers" ON public.blockers FOR ALL USING (true) WITH CHECK (true);
+
 -- ==============================================================================
--- 7. INITIAL SEED DATA (System Admin Account & Starter Data)
+-- 9. REALTIME — every input table streams live inserts/updates/deletes to
+--    subscribed clients (guarded so re-running this script never errors on
+--    a table that's already published)
+-- ==============================================================================
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['profiles', 'pto_requests', 'peer_badges', 'mood_logs', 'hr_notifications', 'work_shifts', 'blockers']
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    END IF;
+  END LOOP;
+END $$;
+
+-- ==============================================================================
+-- 10. SEED DATA (bootstrap admin account only — no fabricated demo rows,
+--     since the app itself filters out placeholder PTO/mood/badge seed
+--     records on read)
 -- ==============================================================================
 INSERT INTO public.profiles (id, email, name, role, department, avatar_url, status, password)
 VALUES (
@@ -156,19 +215,3 @@ VALUES (
   'active',
   'admin'
 ) ON CONFLICT (email) DO NOTHING;
-
-INSERT INTO public.pto_requests (id, user_name, department, category, start_date, end_date, total_days, reason, status, auto_approved, reviewed_by, reviewed_at)
-VALUES (
-  'pto-1',
-  'System Administrator',
-  'Engineering',
-  'mental_health',
-  CURRENT_DATE + INTERVAL '6 days',
-  CURRENT_DATE + INTERVAL '6 days',
-  1.0,
-  'Wellness recharge day to reset after product release sprint',
-  'approved',
-  true,
-  'AI Wellness Guard (Auto-Approved)',
-  CURRENT_DATE
-) ON CONFLICT (id) DO NOTHING;

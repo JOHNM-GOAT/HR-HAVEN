@@ -1389,6 +1389,13 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     setToastNotification('Blocker logged — burnout risk score updated.');
+
+    // Persist to server API & Supabase database
+    fetch('/api/blockers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', blocker: newBlocker, userProfile })
+    }).catch(err => console.warn('Blocker database sync error:', err));
   };
 
   const resolveBlocker = (id: string) => {
@@ -1424,6 +1431,13 @@ export const WellnessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     setToastNotification('Blocker resolved — burnout risk score updated.');
+
+    // Persist to server API & Supabase database
+    fetch('/api/blockers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resolve', id })
+    }).catch(err => console.warn('Blocker resolve sync error:', err));
   };
 
   const [activeReminderAlert, setActiveReminderAlert] = useState<WellnessReminder | null>(null);
