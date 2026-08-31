@@ -149,7 +149,11 @@ CREATE TABLE IF NOT EXISTS public.blockers (
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.hr_outreach_messages (
   id TEXT PRIMARY KEY DEFAULT ('outreach-' || floor(extract(epoch from now()) * 1000)::TEXT),
-  alert_id TEXT REFERENCES public.hr_notifications(id) ON DELETE SET NULL,
+  -- Not a typed foreign key: hr_notifications.id may already be uuid on a
+  -- project where that table was created by an earlier schema (its row won't
+  -- be recreated by CREATE TABLE IF NOT EXISTS below), and this relationship
+  -- is only ever looked up through the API layer, never a SQL join.
+  alert_id TEXT,
   sender_name TEXT NOT NULL,
   recipient_name TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -157,7 +161,29 @@ CREATE TABLE IF NOT EXISTS public.hr_outreach_messages (
 );
 
 -- ==============================================================================
--- 9. ROW LEVEL SECURITY (RLS)
+-- 9. DEFENSIVE PATCH — the hr_notifications error above proves this project
+--    already had at least one of these tables from an earlier schema
+--    version, which CREATE TABLE IF NOT EXISTS silently leaves untouched.
+--    ADD COLUMN IF NOT EXISTS actually guarantees the columns the app's API
+--    routes read/write are present, on a fresh install or a legacy table.
+-- ==============================================================================
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS department TEXT NOT NULL DEFAULT 'Engineering';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS deletion_reason TEXT;
+
+ALTER TABLE public.mood_logs ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE public.mood_logs ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE public.mood_logs ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT TRUE;
+
+ALTER TABLE public.hr_notifications ADD COLUMN IF NOT EXISTS action_note TEXT;
+
+ALTER TABLE public.peer_badges ADD COLUMN IF NOT EXISTS sender_avatar TEXT;
+ALTER TABLE public.peer_badges ADD COLUMN IF NOT EXISTS recipient_avatar TEXT;
+
+-- ==============================================================================
+-- 10. ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pto_requests ENABLE ROW LEVEL SECURITY;
@@ -197,7 +223,7 @@ DROP POLICY IF EXISTS "Public access hr_outreach_messages" ON public.hr_outreach
 CREATE POLICY "Public access hr_outreach_messages" ON public.hr_outreach_messages FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
--- 10. REALTIME — every input table streams live inserts/updates/deletes to
+-- 11. REALTIME — every input table streams live inserts/updates/deletes to
 --    subscribed clients (guarded so re-running this script never errors on
 --    a table that's already published)
 -- ==============================================================================
@@ -217,7 +243,7 @@ BEGIN
 END $$;
 
 -- ==============================================================================
--- 11. SEED DATA (bootstrap admin account only — no fabricated demo rows,
+-- 12. SEED DATA (bootstrap admin account only — no fabricated demo rows,
 --     since the app itself filters out placeholder PTO/mood/badge seed
 --     records on read)
 -- ==============================================================================
